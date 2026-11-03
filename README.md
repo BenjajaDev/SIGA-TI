@@ -2,7 +2,7 @@
 
 Sistema de Gestión de Solicitudes TI (prototipo, datos ficticios): autenticación y roles, registro, asignación y seguimiento de solicitudes e indicadores.
 
-> Estado: **Etapa 2 (backend y core) completa**. Frontend (Etapa 3) y QA final (Etapa 4) pendientes. Diseño en [`docs/`](./docs/README.md).
+> Estado: **Etapas 1–3 completas** (diseño, backend y frontend). QA final, E2E y datos de demostración (Etapa 4) pendientes. Diseño en [`docs/`](./docs/README.md).
 
 ## Requisitos
 
@@ -18,10 +18,12 @@ pnpm db:up                      # PostgreSQL local con Docker (o use uno propio)
 pnpm --filter @siga/api db:generate
 pnpm db:migrate
 pnpm db:seed                    # catálogos, SLA y usuarios ficticios
-pnpm --filter @siga/api dev     # http://localhost:3000
+pnpm --filter @siga/api dev     # API en http://localhost:3000
+pnpm --filter @siga/web dev     # Web en http://localhost:5173 (proxy /api → API)
 ```
 
 - Documentación interactiva: http://localhost:3000/api/docs (desactivada en producción)
+- Colores, logo y nombre de la institución: ingrese como `admin@siga-ti.test` → **Apariencia**.
 - Usuarios ficticios (`@siga-ti.test`): `admin`, `supervisor`, `tecnico1..3`, `solicitante1..5`; contraseña = `SEED_DEFAULT_PASSWORD` del `.env`.
 
 ## Scripts
@@ -40,8 +42,9 @@ Las pruebas de integración usan PostgreSQL real (`siga_ti_test`, creada por `do
 
 ```
 apps/api         API Express (Clean Architecture: domain · application · infrastructure · interfaces/http)
+apps/web         SPA React (components atómicos · hooks · services)
 packages/shared  Esquemas Zod del contrato (API y, luego, web)
 docs/            Diseño, modelo de datos, contrato OpenAPI y decisiones
 ```
 
-Resumen de la etapa en [`docs/etapa-2.md`](./docs/etapa-2.md).
+Resúmenes: [`docs/etapa-2.md`](./docs/etapa-2.md) · [`docs/etapa-3.md`](./docs/etapa-3.md).

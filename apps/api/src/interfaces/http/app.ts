@@ -20,6 +20,7 @@ import {
   createUsersRouter,
   type CatalogRoutesDeps,
 } from './routes/catalog-routes';
+import { createBrandingRouter, type BrandingRoutesDeps } from './routes/branding-routes';
 import { createDashboardRouter, type DashboardRoutesDeps } from './routes/dashboard-routes';
 import { createTicketRouter, type TicketRoutesDeps } from './routes/ticket-routes';
 import type { AuthenticateAccessTokenUseCase } from '../../application/use-cases/auth/authenticate-access-token';
@@ -35,6 +36,7 @@ export interface AppDependencies {
   readonly tickets: Omit<TicketRoutesDeps, 'authenticate'>;
   readonly dashboard: Omit<DashboardRoutesDeps, 'authenticate'>;
   readonly catalog: Omit<CatalogRoutesDeps, 'authenticate'>;
+  readonly branding: Omit<BrandingRoutesDeps, 'authenticate'>;
 }
 
 interface LimiterOptions {
@@ -87,10 +89,15 @@ export const createApp = (deps: AppDependencies): Express => {
   app.use(helmet());
   app.use(cors({ origin: [...env.CORS_ALLOWED_ORIGINS], credentials: true }));
   app.use(createLimiter(GLOBAL_RATE_LIMIT));
+  const requireAuth = authenticate(deps.authenticateUseCase);
+  app.use(
+    `${API_PREFIX}/branding`,
+    createBrandingRouter({ ...deps.branding, authenticate: requireAuth }),
+  );
+
   app.use(express.json({ limit: '100kb' }));
   app.use(cookieParser());
 
-  const requireAuth = authenticate(deps.authenticateUseCase);
   const api = express.Router();
   api.get('/health', (_req, res) => {
     res.json({ status: 'ok' });

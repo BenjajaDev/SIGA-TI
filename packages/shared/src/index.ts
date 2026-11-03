@@ -8,3 +8,5 @@ export * from './tickets';
 export * from './events';
 export * from './comments';
 export * from './dashboard';
+export * from './ticket-rules';
+export * from './branding';

@@ -5,6 +5,10 @@ import { LoginUseCase } from './application/use-cases/auth/login';
 import { LogoutUseCase } from './application/use-cases/auth/logout';
 import { RefreshSessionUseCase } from './application/use-cases/auth/refresh-session';
 import { SessionIssuer } from './application/use-cases/auth/session-issuer';
+import {
+  GetBrandingUseCase,
+  UpdateBrandingUseCase,
+} from './application/use-cases/branding/branding';
 import { ListCategoriesUseCase, ListUsersUseCase } from './application/use-cases/catalog/catalog';
 import {
   GetDashboardSummaryUseCase,
@@ -29,6 +33,7 @@ import {
   PrismaCategoryRepository,
   PrismaSlaPolicyRepository,
 } from './infrastructure/persistence/repositories/prisma-catalog-repositories';
+import { PrismaBrandingRepository } from './infrastructure/persistence/repositories/prisma-branding-repository';
 import { PrismaCommentRepository } from './infrastructure/persistence/repositories/prisma-comment-repository';
 import { PrismaDashboardQueries } from './infrastructure/persistence/repositories/prisma-dashboard-queries';
 import { PrismaRefreshTokenRepository } from './infrastructure/persistence/repositories/prisma-refresh-token-repository';
@@ -59,6 +64,7 @@ export const buildApp = (env: Env, db: Database, overrides: Overrides = {}): Exp
   const slaPolicies = new PrismaSlaPolicyRepository(db);
   const refreshTokens = new PrismaRefreshTokenRepository(db);
   const dashboardQueries = new PrismaDashboardQueries(db);
+  const brandingRepository = new PrismaBrandingRepository(db);
   const identity = new SimulatedIdentityProvider(db, hasher);
 
   const sessions = new SessionIssuer(tokens, refreshTokens, clock, {
@@ -91,6 +97,10 @@ export const buildApp = (env: Env, db: Database, overrides: Overrides = {}): Exp
       byCategory: new GetTicketsByCategoryUseCase(dashboardQueries),
       workload: new GetTechnicianWorkloadUseCase(dashboardQueries),
       resolution: new GetResolutionMetricsUseCase(dashboardQueries, clock),
+    },
+    branding: {
+      get: new GetBrandingUseCase(brandingRepository),
+      update: new UpdateBrandingUseCase(brandingRepository),
     },
     catalog: {
       categories: new ListCategoriesUseCase(categories),

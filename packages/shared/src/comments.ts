@@ -23,3 +23,4 @@ export const commentListSchema = itemsOf(commentSchema);
 
 export type Comment = z.infer<typeof commentSchema>;
 export type CreateCommentRequest = z.infer<typeof createCommentRequestSchema>;
+export type CreateCommentInput = z.input<typeof createCommentRequestSchema>;

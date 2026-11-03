@@ -2,6 +2,8 @@ import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-ope
 import { z } from 'zod';
 import {
   assignTicketRequestSchema,
+  brandingSchema,
+  updateBrandingRequestSchema,
   authSessionSchema,
   categoryListSchema,
   categoryCountListSchema,
@@ -268,6 +270,29 @@ const ROUTES: readonly RouteSpec[] = [
       'Roles SUPERVISOR y ADMIN. Solicitudes con `resolvedAt` dentro del rango (por defecto, últimos 30 días).',
     query: resolutionQuerySchema,
     success: { status: 200, schema: resolutionMetricsSchema },
+    errors: [400, 401, 403],
+  },
+  {
+    method: 'get',
+    path: '/branding',
+    operationId: 'getBranding',
+    tag: 'branding',
+    summary: 'Identidad visual vigente (pública)',
+    description: 'Sin autenticación: la pantalla de ingreso también usa el tema.',
+    secured: false,
+    success: { status: 200, schema: brandingSchema },
+    errors: [],
+  },
+  {
+    method: 'put',
+    path: '/branding',
+    operationId: 'updateBranding',
+    tag: 'branding',
+    summary: 'Editar nombre, logo, colores y degradado',
+    description:
+      'Solo ADMIN. El color primario exige contraste >= 4.5 con blanco y el secundario >= 3. Logo: PNG, JPG, WebP o SVG en data URL (<= 300 000 caracteres).',
+    body: updateBrandingRequestSchema,
+    success: { status: 200, schema: brandingSchema },
     errors: [400, 401, 403],
   },
   {

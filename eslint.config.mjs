@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 const noInfraLibs = {
@@ -114,14 +115,60 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/test/**/*.ts'],
+    files: ['apps/web/**/*.{ts,tsx}'],
+    plugins: { 'react-hooks': reactHooks },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+    },
+  },
+  {
+    files: ['apps/web/src/services/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['react', 'react-dom', 'react-router', '@tanstack/*'],
+              message: 'Los servicios no dependen de React.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/web/src/components/**/*.{ts,tsx}', 'apps/web/src/pages/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/services/index', '**/services/*-service', '**/services/http-client'],
+              allowTypeImports: true,
+              message: 'La UI usa hooks, no servicios directamente.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['**/test/**/*.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/unbound-method': 'off',
     },
   },
   {
-    files: ['**/*.mjs', '**/vitest.config.ts', '**/tsup.config.ts', '**/prisma.config.ts'],
+    files: [
+      '**/*.mjs',
+      '**/vitest.config.ts',
+      '**/vite.config.ts',
+      '**/tsup.config.ts',
+      '**/prisma.config.ts',
+    ],
     ...tseslint.configs.disableTypeChecked,
   },
 );
