@@ -104,7 +104,7 @@ siga-ti/
 │  │  │  │  ├─ logging/     logger.ts
 │  │  │  │  └─ time/        system-clock.ts
 │  │  │  ├─ interfaces/http/
-│  │  │  │  ├─ routes/ controllers/ middlewares/ openapi/ app.ts
+│  │  │  │  ├─ routes/ middlewares/ openapi/ app.ts
 │  │  │  ├─ main.ts         # composition root
 │  │  │  └─ server.ts
 │  │  └─ test/ (unit/ integration/ helpers/)   # espejo de src; integración con PostgreSQL real
