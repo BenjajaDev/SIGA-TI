@@ -1,3 +1,8 @@
+import {
+  canComment as sharedCanComment,
+  canWriteInternalComment,
+  type TicketActorContext,
+} from '@siga/shared';
 import { ForbiddenError, NotFoundError } from '../errors';
 import type { Actor, Ticket } from '../entities';
 
@@ -27,11 +32,18 @@ export const assertCanView = (actor: Actor, ticket: Ticket | null): Ticket => {
 export const canReadInternalComments = (actor: Actor, ticket: Ticket): boolean =>
   isStaffWithFullView(actor) || isAssignedTechnician(actor, ticket);
 
+const contextOf = (actor: Actor, ticket: Ticket): TicketActorContext => ({
+  role: actor.role,
+  userId: actor.id,
+  requesterId: ticket.requester.id,
+  assigneeId: ticket.assignee?.id ?? null,
+});
+
 export const canWriteInternalComments = (actor: Actor, ticket: Ticket): boolean =>
-  actor.role === 'SUPERVISOR' || isAssignedTechnician(actor, ticket);
+  canWriteInternalComment(contextOf(actor, ticket), 'ABIERTA');
 
 export const canComment = (actor: Actor, ticket: Ticket): boolean =>
-  actor.role === 'SUPERVISOR' || isAssignedTechnician(actor, ticket) || isRequester(actor, ticket);
+  sharedCanComment(contextOf(actor, ticket), 'ABIERTA');
 
 export const assertSupervisor = (actor: Actor): void => {
   if (actor.role !== 'SUPERVISOR') throw new ForbiddenError();
@@ -39,4 +51,8 @@ export const assertSupervisor = (actor: Actor): void => {
 
 export const assertSupervisorOrAdmin = (actor: Actor): void => {
   if (!isStaffWithFullView(actor)) throw new ForbiddenError();
+};
+
+export const assertAdmin = (actor: Actor): void => {
+  if (actor.role !== 'ADMIN') throw new ForbiddenError();
 };

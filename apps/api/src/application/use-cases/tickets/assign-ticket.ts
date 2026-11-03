@@ -1,3 +1,4 @@
+import { ASSIGNABLE_STATUSES } from '@siga/shared';
 import type { Actor, Ticket } from '../../../domain/entities';
 import { ConflictError } from '../../../domain/errors';
 import type { Clock } from '../../../domain/ports/security';
@@ -11,8 +12,6 @@ export interface AssignTicketInput {
   readonly ticketId: string;
   readonly assigneeId: string;
 }
-
-const REASSIGNABLE = ['ASIGNADA', 'EN_PROGRESO', 'EN_ESPERA'];
 
 export class AssignTicketUseCase {
   constructor(
@@ -35,7 +34,7 @@ export class AssignTicketUseCase {
     const currentAssigneeId = ticket.assignee?.id ?? null;
     const isFirstAssignment = ticket.status === 'ABIERTA';
 
-    if (!isFirstAssignment && !REASSIGNABLE.includes(ticket.status)) {
+    if (!ASSIGNABLE_STATUSES.includes(ticket.status)) {
       throw new ConflictError(
         'INVALID_TRANSITION',
         `No se puede asignar una solicitud en estado ${ticket.status}`,

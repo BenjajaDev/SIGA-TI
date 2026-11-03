@@ -53,7 +53,7 @@ export const createTestContext = (
 
   const reset = async (): Promise<void> => {
     await db.$executeRawUnsafe(
-      'TRUNCATE TABLE comments, ticket_events, tickets, refresh_tokens, users, categories, sla_policies RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE comments, ticket_events, tickets, refresh_tokens, users, categories, sla_policies, brand_settings RESTART IDENTITY CASCADE',
     );
     await seedBase(db, fastHasher, TEST_PASSWORD);
     clock.set(new Date());

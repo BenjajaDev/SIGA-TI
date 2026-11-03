@@ -172,3 +172,15 @@ model Comment {
   @@index([ticketId, createdAt])
   @@map("comments")
 }
+
+model BrandSettings {
+  id              String   @id @default("default")
+  institutionName String   @db.VarChar(80)
+  primaryColor    String   @db.Char(7)
+  secondaryColor  String   @db.Char(7)
+  gradientAngle   Int
+  logoDataUrl     String?  @db.Text
+  updatedAt       DateTime @updatedAt @db.Timestamptz(3)
+
+  @@map("brand_settings")
+}

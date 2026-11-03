@@ -12,5 +12,6 @@
 | [open-questions.md](./open-questions.md) | Preguntas abiertas, ambigüedades y supuestos |
 
 | [etapa-2.md](./etapa-2.md) | Resumen de la Etapa 2: entregado, cambios respecto del diseño y limitaciones |
+| [etapa-3.md](./etapa-3.md) | Resumen de la Etapa 3: frontend, identidad visual editable, hallazgos y limitaciones |
 
-Estado: **Etapas 1 y 2 completas.**
+Estado: **Etapas 1–3 completas.**

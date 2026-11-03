@@ -71,3 +71,4 @@ export type CreateTicketRequest = z.infer<typeof createTicketRequestSchema>;
 export type AssignTicketRequest = z.infer<typeof assignTicketRequestSchema>;
 export type TransitionTicketRequest = z.infer<typeof transitionTicketRequestSchema>;
 export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;
+export type CreateTicketInput = z.input<typeof createTicketRequestSchema>;
