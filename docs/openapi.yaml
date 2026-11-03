@@ -1,0 +1,926 @@
+openapi: 3.1.0
+info:
+  title: SIGA-TI API
+  version: 0.1.0
+  description: |
+    Sistema de Gestión de Solicitudes TI (prototipo). Datos ficticios.
+
+    Propuesta de contrato de la Etapa 1. En la Etapa 2 este documento se **genera desde los esquemas Zod**
+    de `packages/shared` y una prueba verifica que no haya deriva respecto de este archivo.
+
+    **Orden de evaluación de errores**: 401 (autenticación) → 400 (validación) → 404 (recurso inexistente
+    o no visible) → 403 (rol/actor sin permiso) → 409 (regla de negocio/estado).
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Desarrollo local
+tags:
+  - name: auth
+  - name: tickets
+  - name: dashboard
+  - name: categories
+  - name: users
+  - name: health
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      summary: Ingreso con identidad simulada (RF-01)
+      description: Limitado por IP (429). Responde igual ante usuario inexistente o clave errónea. Establece la cookie `siga_rt` (httpOnly).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Sesión iniciada
+          headers:
+            Set-Cookie:
+              description: "`siga_rt=<token>; HttpOnly; SameSite=Strict; Path=/api/v1/auth; Max-Age=604800` (+ `Secure` en producción)"
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthSession' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      operationId: refreshSession
+      summary: Renueva la sesión rotando el refresh token (RF-03)
+      description: Lee la cookie `siga_rt`. Verifica `Origin`. Reutilizar un token ya rotado revoca toda la familia y responde 401.
+      security: []
+      parameters:
+        - in: cookie
+          name: siga_rt
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Nuevo access token y nueva cookie
+          headers:
+            Set-Cookie:
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthSession' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      summary: Cierra la sesión y revoca la familia de refresh tokens (RF-03)
+      description: Idempotente; limpia la cookie aunque el token sea inválido.
+      security: []
+      responses:
+        '204': { description: Sesión cerrada }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /auth/me:
+    get:
+      tags: [auth]
+      operationId: getCurrentUser
+      summary: Usuario autenticado
+      responses:
+        '200':
+          description: Perfil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /tickets:
+    post:
+      tags: [tickets]
+      operationId: createTicket
+      summary: Registrar solicitud (RF-04)
+      description: |
+        Roles: SOLICITANTE, TECNICO, SUPERVISOR. `requesterId` solo lo acepta el SUPERVISOR
+        (registro a nombre de otro; ver pregunta Q-3) — otros roles reciben 403 si lo envían.
+        Calcula `dueAt` con la política SLA de la prioridad y crea el evento `CREATED`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTicketRequest' }
+      responses:
+        '201':
+          description: Solicitud creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ticket' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    get:
+      tags: [tickets]
+      operationId: listTickets
+      summary: Listar con filtros y paginación (RF-05)
+      description: "Solo devuelve las solicitudes visibles para el usuario (solicitante: propias; técnico: asignadas a él y propias; supervisor y admin: todas)."
+      parameters:
+        - { in: query, name: status, schema: { $ref: '#/components/schemas/TicketStatus' } }
+        - { in: query, name: priority, schema: { $ref: '#/components/schemas/Priority' } }
+        - { in: query, name: categoryId, schema: { type: string, format: uuid } }
+        - { in: query, name: assigneeId, schema: { type: string, format: uuid } }
+        - { in: query, name: unassigned, description: "Si es `true`, solo sin asignar (excluyente con `assigneeId`).", schema: { type: boolean } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [createdAt, -createdAt, dueAt, -dueAt, priority, -priority], default: -createdAt }
+      responses:
+        '200':
+          description: Página de solicitudes
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TicketPage' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /tickets/{ticketId}:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      tags: [tickets]
+      operationId: getTicket
+      summary: Detalle de solicitud
+      responses:
+        '200':
+          description: Detalle
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ticket' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /tickets/{ticketId}/assignment:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    put:
+      tags: [tickets]
+      operationId: assignTicket
+      summary: Asignar o reasignar a un técnico (RF-06)
+      description: |
+        Solo SUPERVISOR. El destino debe ser un usuario **activo** con rol TECNICO (409 `INVALID_ASSIGNEE`).
+        En `ABIERTA` pasa a `ASIGNADA` (evento `ASSIGNED`). En `ASIGNADA`, `EN_PROGRESO` o `EN_ESPERA`
+        solo cambia el técnico (evento `REASSIGNED`, estado intacto). En `RESUELTA` o `CERRADA` responde 409 `INVALID_TRANSITION`.
+        Asignar al técnico ya asignado responde 409 `INVALID_ASSIGNEE`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AssignTicketRequest' }
+      responses:
+        '200':
+          description: Solicitud actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ticket' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /tickets/{ticketId}/transitions:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    post:
+      tags: [tickets]
+      operationId: transitionTicket
+      summary: Cambiar estado (RF-07, RF-13)
+      description: |
+        Transiciones y actores permitidos en `data-model.md` §3. `ASIGNADA` no es destino válido aquí (se alcanza al asignar).
+        `note` es obligatoria para `EN_ESPERA`, `RESUELTA` y reabrir (`RESUELTA`→`EN_PROGRESO`).
+        Si dos usuarios compiten, el perdedor recibe 409 `CONCURRENT_MODIFICATION`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TransitionTicketRequest' }
+      responses:
+        '200':
+          description: Solicitud actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Ticket' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /tickets/{ticketId}/events:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      tags: [tickets]
+      operationId: listTicketEvents
+      summary: Historial inmutable (RF-08)
+      description: Orden cronológico ascendente. Sin paginación (volumen acotado por solicitud).
+      responses:
+        '200':
+          description: Eventos
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/TicketEvent' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /tickets/{ticketId}/comments:
+    parameters:
+      - $ref: '#/components/parameters/TicketId'
+    get:
+      tags: [tickets]
+      operationId: listTicketComments
+      summary: Comentarios (RF-09, deseable)
+      description: Los `INTERNO` solo se devuelven a técnico asignado, supervisor y admin.
+      responses:
+        '200':
+          description: Comentarios en orden cronológico
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Comment' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    post:
+      tags: [tickets]
+      operationId: addTicketComment
+      summary: Agregar comentario (RF-09, deseable)
+      description: |
+        El solicitante solo puede publicar `PUBLICO`. Técnico asignado y supervisor pueden publicar ambos.
+        No se permiten comentarios en solicitudes `CERRADA` (409 `TICKET_CLOSED`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCommentRequest' }
+      responses:
+        '201':
+          description: Comentario creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Comment' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /dashboard/summary:
+    get:
+      tags: [dashboard]
+      operationId: getDashboardSummary
+      summary: Solicitudes por estado y backlog (RF-10)
+      description: Roles SUPERVISOR y ADMIN.
+      responses:
+        '200':
+          description: Resumen
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /dashboard/by-category:
+    get:
+      tags: [dashboard]
+      operationId: getDashboardByCategory
+      summary: Solicitudes por categoría (RF-10)
+      description: Roles SUPERVISOR y ADMIN.
+      responses:
+        '200':
+          description: Conteo por categoría
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/CategoryCount' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /dashboard/workload:
+    get:
+      tags: [dashboard]
+      operationId: getDashboardWorkload
+      summary: Carga por técnico (RF-10)
+      description: Roles SUPERVISOR y ADMIN. Incluye técnicos activos sin carga.
+      responses:
+        '200':
+          description: Carga por técnico
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/TechnicianWorkload' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /dashboard/resolution:
+    get:
+      tags: [dashboard]
+      operationId: getDashboardResolution
+      summary: Tiempo medio de resolución y cumplimiento de SLA (RF-11, deseable)
+      description: Roles SUPERVISOR y ADMIN. Considera solicitudes con `resolvedAt` dentro del rango (por defecto, últimos 30 días).
+      parameters:
+        - { in: query, name: from, schema: { type: string, format: date-time } }
+        - { in: query, name: to, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: Métricas de resolución
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResolutionMetrics' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /categories:
+    get:
+      tags: [categories]
+      operationId: listCategories
+      summary: Listar categorías
+      description: Todo usuario autenticado ve las activas. `includeInactive=true` solo para ADMIN (403 en otro caso).
+      parameters:
+        - { in: query, name: includeInactive, schema: { type: boolean, default: false } }
+      responses:
+        '200':
+          description: Categorías
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Category' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    post:
+      tags: [categories]
+      operationId: createCategory
+      summary: Crear categoría (RF-12, opcional)
+      description: Solo ADMIN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateCategoryRequest' }
+      responses:
+        '201':
+          description: Categoría creada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /categories/{categoryId}:
+    patch:
+      tags: [categories]
+      operationId: updateCategory
+      summary: Editar o desactivar categoría (RF-12, opcional)
+      description: Solo ADMIN.
+      parameters:
+        - { in: path, name: categoryId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateCategoryRequest' }
+      responses:
+        '200':
+          description: Categoría actualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /users:
+    get:
+      tags: [users]
+      operationId: listUsers
+      summary: Listar usuarios
+      description: |
+        ADMIN: todos. SUPERVISOR: solo puede consultar `role=TECNICO` (para asignar); otro filtro o ausencia de `role` responde 403.
+      parameters:
+        - { in: query, name: role, schema: { $ref: '#/components/schemas/Role' } }
+        - { in: query, name: isActive, schema: { type: boolean } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+      responses:
+        '200':
+          description: Página de usuarios
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserPage' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    post:
+      tags: [users]
+      operationId: createUser
+      summary: Crear usuario (RF-12, opcional)
+      description: Solo ADMIN. Crea la entrada en el directorio simulado con la contraseña enviada.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateUserRequest' }
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /users/{userId}:
+    patch:
+      tags: [users]
+      operationId: updateUser
+      summary: Cambiar rol, nombre o estado (RF-12, opcional)
+      description: Solo ADMIN. Un admin no puede desactivarse ni quitarse su propio rol (409). Desactivar revoca sus refresh tokens.
+      parameters:
+        - { in: path, name: userId, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateUserRequest' }
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+  /health:
+    get:
+      tags: [health]
+      operationId: getHealth
+      summary: Liveness
+      security: []
+      responses:
+        '200':
+          description: Proceso vivo
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: ok }
+  /health/ready:
+    get:
+      tags: [health]
+      operationId: getReadiness
+      summary: Readiness (verifica la base de datos)
+      security: []
+      responses:
+        '200':
+          description: Listo
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, const: ok }
+        '500': { $ref: '#/components/responses/InternalError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    TicketId:
+      in: path
+      name: ticketId
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    ValidationError:
+      description: "400 — Entrada inválida (`VALIDATION_ERROR`). `details` lista campos y mensajes."
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Unauthorized:
+      description: "401 — `UNAUTHENTICATED`, `INVALID_CREDENTIALS` o `TOKEN_EXPIRED`."
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: "403 — `FORBIDDEN`: el rol o el actor no tiene permiso."
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: "404 — `NOT_FOUND`: no existe o no es visible para el usuario."
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: "409 — `INVALID_TRANSITION`, `INVALID_ASSIGNEE`, `CONCURRENT_MODIFICATION`, `TICKET_CLOSED`, `DUPLICATE_RESOURCE` o `SELF_PROTECTION`."
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    RateLimited:
+      description: "429 — `RATE_LIMITED`. Incluye cabecera `Retry-After`."
+      headers:
+        Retry-After:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    InternalError:
+      description: "500 — `INTERNAL_ERROR`. Mensaje genérico; el detalle solo está en logs."
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  schemas:
+    Role:
+      type: string
+      enum: [SOLICITANTE, TECNICO, SUPERVISOR, ADMIN]
+    TicketStatus:
+      type: string
+      enum: [ABIERTA, ASIGNADA, EN_PROGRESO, EN_ESPERA, RESUELTA, CERRADA]
+    Priority:
+      type: string
+      enum: [CRITICA, ALTA, MEDIA, BAJA]
+    TicketEventType:
+      type: string
+      enum: [CREATED, ASSIGNED, REASSIGNED, STATUS_CHANGED]
+    CommentVisibility:
+      type: string
+      enum: [PUBLICO, INTERNO]
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - UNAUTHENTICATED
+        - INVALID_CREDENTIALS
+        - TOKEN_EXPIRED
+        - FORBIDDEN
+        - NOT_FOUND
+        - INVALID_TRANSITION
+        - INVALID_ASSIGNEE
+        - CONCURRENT_MODIFICATION
+        - TICKET_CLOSED
+        - DUPLICATE_RESOURCE
+        - SELF_PROTECTION
+        - RATE_LIMITED
+        - INTERNAL_ERROR
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, details, requestId]
+          properties:
+            code: { $ref: '#/components/schemas/ErrorCode' }
+            message: { type: string, description: Mensaje en español apto para el usuario. }
+            details:
+              type: array
+              description: Vacío salvo en `VALIDATION_ERROR`.
+              items:
+                type: object
+                required: [path, message]
+                properties:
+                  path: { type: string, examples: ['title'] }
+                  message: { type: string }
+            requestId: { type: string, format: uuid }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 1, maxLength: 128 }
+    AuthSession:
+      type: object
+      required: [accessToken, expiresIn, user]
+      properties:
+        accessToken: { type: string }
+        expiresIn: { type: integer, description: Segundos de vigencia del access token., examples: [900] }
+        user: { $ref: '#/components/schemas/User' }
+
+    User:
+      type: object
+      required: [id, email, fullName, role, isActive, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        fullName: { type: string }
+        role: { $ref: '#/components/schemas/Role' }
+        isActive: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    UserSummary:
+      type: object
+      required: [id, fullName]
+      properties:
+        id: { type: string, format: uuid }
+        fullName: { type: string }
+    CreateUserRequest:
+      type: object
+      required: [email, fullName, role, password]
+      additionalProperties: false
+      properties:
+        email: { type: string, format: email, maxLength: 254 }
+        fullName: { type: string, minLength: 2, maxLength: 120 }
+        role: { $ref: '#/components/schemas/Role' }
+        password: { type: string, minLength: 12, maxLength: 128 }
+    UpdateUserRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        fullName: { type: string, minLength: 2, maxLength: 120 }
+        role: { $ref: '#/components/schemas/Role' }
+        isActive: { type: boolean }
+    UserPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/User' }
+
+    Category:
+      type: object
+      required: [id, name, description, isActive]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: "{ type: [string, 'null'] }"
+        isActive: { type: boolean }
+    CreateCategoryRequest:
+      type: object
+      required: [name]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 2, maxLength: 80 }
+        description: "{ type: string, maxLength: 255 }"
+    UpdateCategoryRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 2, maxLength: 80 }
+        description: "{ type: [string, 'null'], maxLength: 255 }"
+        isActive: { type: boolean }
+
+    PageMeta:
+      type: object
+      required: [page, pageSize, totalItems, totalPages]
+      properties:
+        page: { type: integer, minimum: 1 }
+        pageSize: { type: integer, minimum: 1, maximum: 100 }
+        totalItems: { type: integer, minimum: 0 }
+        totalPages: { type: integer, minimum: 0 }
+
+    Ticket:
+      type: object
+      required: [id, code, title, description, category, priority, status, requester, assignee, dueAt, isOverdue, resolvedAt, closedAt, createdAt, updatedAt, allowedActions]
+      properties:
+        id: { type: string, format: uuid }
+        code: { type: string, pattern: '^SIGA-\d{6,}$', examples: ['SIGA-000123'] }
+        title: { type: string }
+        description: "{ type: string }"
+        category:
+          type: object
+          required: [id, name]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        priority: { $ref: '#/components/schemas/Priority' }
+        status: { $ref: '#/components/schemas/TicketStatus' }
+        requester: { $ref: '#/components/schemas/UserSummary' }
+        assignee:
+          oneOf:
+            - $ref: '#/components/schemas/UserSummary'
+            - type: 'null'
+        dueAt: { type: string, format: date-time }
+        isOverdue: { type: boolean, description: "`true` si no está resuelta y `now > dueAt`." }
+        resolvedAt: { type: [string, 'null'], format: date-time }
+        closedAt: { type: [string, 'null'], format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        allowedActions:
+          type: object
+          description: Acciones disponibles para el usuario actual; la UI las usa para mostrar/ocultar controles (la API vuelve a validar siempre).
+          required: [canAssign, transitions, canComment, canCommentInternal]
+          properties:
+            canAssign: { type: boolean }
+            transitions:
+              type: array
+              items: { $ref: '#/components/schemas/TicketStatus' }
+            canComment: { type: boolean }
+            canCommentInternal: { type: boolean }
+    TicketPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMeta'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items: { $ref: '#/components/schemas/Ticket' }
+    CreateTicketRequest:
+      type: object
+      required: [title, description, categoryId, priority]
+      additionalProperties: false
+      properties:
+        title: { type: string, minLength: 5, maxLength: 120 }
+        description: "{ type: string, minLength: 10, maxLength: 5000 }"
+        categoryId: { type: string, format: uuid }
+        priority: { $ref: '#/components/schemas/Priority' }
+        requesterId:
+          type: string
+          format: uuid
+          description: Solo SUPERVISOR; debe ser un usuario activo.
+    AssignTicketRequest:
+      type: object
+      required: [assigneeId]
+      additionalProperties: false
+      properties:
+        assigneeId: { type: string, format: uuid }
+    TransitionTicketRequest:
+      type: object
+      required: [to]
+      additionalProperties: false
+      properties:
+        to:
+          type: string
+          enum: [EN_PROGRESO, EN_ESPERA, RESUELTA, CERRADA]
+        note: { type: string, minLength: 3, maxLength: 1000 }
+
+    TicketEvent:
+      type: object
+      required: [id, type, actor, fromStatus, toStatus, fromAssignee, toAssignee, note, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { $ref: '#/components/schemas/TicketEventType' }
+        actor: { $ref: '#/components/schemas/UserSummary' }
+        fromStatus:
+          oneOf: [{ $ref: '#/components/schemas/TicketStatus' }, { type: 'null' }]
+        toStatus:
+          oneOf: [{ $ref: '#/components/schemas/TicketStatus' }, { type: 'null' }]
+        fromAssignee:
+          oneOf: [{ $ref: '#/components/schemas/UserSummary' }, { type: 'null' }]
+        toAssignee:
+          oneOf: [{ $ref: '#/components/schemas/UserSummary' }, { type: 'null' }]
+        note: { type: [string, 'null'] }
+        createdAt: { type: string, format: date-time }
+
+    Comment:
+      type: object
+      required: [id, author, body, visibility, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        author: { $ref: '#/components/schemas/UserSummary' }
+        body: { type: string }
+        visibility: { $ref: '#/components/schemas/CommentVisibility' }
+        createdAt: { type: string, format: date-time }
+    CreateCommentRequest:
+      type: object
+      required: [body]
+      additionalProperties: false
+      properties:
+        body: { type: string, minLength: 1, maxLength: 2000 }
+        visibility: { $ref: '#/components/schemas/CommentVisibility' }
+
+    StatusCount:
+      type: object
+      required: [status, count]
+      properties:
+        status: { $ref: '#/components/schemas/TicketStatus' }
+        count: { type: integer, minimum: 0 }
+    DashboardSummary:
+      type: object
+      required: [total, byStatus, backlog, unassigned, overdue]
+      properties:
+        total: { type: integer, minimum: 0 }
+        byStatus:
+          type: array
+          description: Siempre incluye los 6 estados (con 0 si corresponde).
+          items: { $ref: '#/components/schemas/StatusCount' }
+        backlog: { type: integer, minimum: 0, description: "ABIERTA + ASIGNADA + EN_PROGRESO + EN_ESPERA." }
+        unassigned: { type: integer, minimum: 0, description: Solicitudes en ABIERTA. }
+        overdue: { type: integer, minimum: 0, description: Sin resolver y con `dueAt` vencido. }
+    CategoryCount:
+      type: object
+      required: [category, count]
+      properties:
+        category:
+          type: object
+          required: [id, name]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        count: { type: integer, minimum: 0 }
+    TechnicianWorkload:
+      type: object
+      required: [technician, openTotal, byStatus]
+      properties:
+        technician: { $ref: '#/components/schemas/UserSummary' }
+        openTotal: { type: integer, minimum: 0 }
+        byStatus:
+          type: array
+          items: { $ref: '#/components/schemas/StatusCount' }
+    ResolutionMetrics:
+      type: object
+      required: [from, to, resolvedCount, averageResolutionHours, slaCompliancePercent, withinSlaCount, breachedCount]
+      properties:
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        resolvedCount: { type: integer, minimum: 0 }
+        averageResolutionHours:
+          type: [number, 'null']
+          description: "`null` si no hubo solicitudes resueltas en el rango."
+        slaCompliancePercent:
+          type: [number, 'null']
+          minimum: 0
+          maximum: 100
+        withinSlaCount: { type: integer, minimum: 0 }
+        breachedCount: { type: integer, minimum: 0 }
