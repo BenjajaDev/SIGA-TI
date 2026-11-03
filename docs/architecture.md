@@ -44,9 +44,9 @@ interfaces/http  ──►  application  ──►  domain  ◄──  infrastru
 
 | Capa | Contenido | Puede importar |
 |---|---|---|
-| `domain` | Entidades (`Ticket`, `User`, …), objetos de valor (`TicketCode`), máquina de estados, políticas de autorización y visibilidad, cálculo de SLA, errores de dominio, **puertos** (repositorios, `UnitOfWork`, `IdentityProvider`, `PasswordHasher`, `TokenService`, `Clock`) | solo `packages/shared` (enums y constantes) y TypeScript estándar |
-| `application` | Casos de uso (una clase por caso, método `execute`), DTO de entrada/salida, orquestación transaccional vía `UnitOfWork` | `domain`, `shared` |
-| `infrastructure` | Repositorios Prisma, `UnitOfWork` Prisma, `SimulatedIdentityProvider`, `Argon2PasswordHasher`, `JoseTokenService`, `SystemClock`, logger pino | `domain`, `application` (tipos), librerías |
+| `domain` | Entidades (`Ticket`, `User`, …), objetos de valor (`TicketCode`), máquina de estados, políticas de autorización y visibilidad, cálculo de SLA, errores de dominio, **puertos** (repositorios, `IdentityProvider`, `PasswordHasher`, `TokenService`, `Clock`) | solo `packages/shared` (enums y constantes) y TypeScript estándar |
+| `application` | Casos de uso (una clase por caso, método `execute`), DTO de entrada/salida, orquestación (la transacción vive en el repositorio, ver ADR-004) | `domain`, `shared` |
+| `infrastructure` | Repositorios Prisma, `SimulatedIdentityProvider`, `Argon2PasswordHasher`, `JoseTokenService`, `SystemClock`, logger pino | `domain`, `application` (tipos), librerías |
 | `interfaces/http` | Rutas, controladores finos, middlewares (autenticación, autorización por rol, validación Zod, manejo de errores, requestId, rate limit), serialización, OpenAPI/Swagger | `application`, `domain` (errores), `shared` |
 | `config` | Esquema Zod del entorno y objeto `Env` inmutable | `zod` |
 | `main.ts` (*composition root*) | Único lugar que instancia infraestructura e inyecta dependencias a casos de uso y controladores | todas |
@@ -57,7 +57,7 @@ La regla se **hace cumplir con ESLint** (`no-restricted-imports` por carpeta, ve
 
 1. `requestId` + logger → `helmet`/CORS → `authenticate` (verifica JWT, recarga usuario activo) → `requireRole` (control grueso) → `validate(schema)` (Zod de `shared`).
 2. Controlador mapea la petición a `TransitionTicketInput` y llama a `TransitionTicketUseCase.execute`.
-3. El caso de uso abre una unidad de trabajo: carga el ticket, aplica `TicketAccessPolicy` (visibilidad → si no ve, `NotFoundError`), `TicketStateMachine.assertTransition(actor, ticket, to)` (409 si inválida, 403 si el rol no puede), actualiza con *compare-and-set* sobre el estado y **crea el `TicketEvent` en la misma transacción**.
+3. El caso de uso carga el ticket, aplica `TicketAccessPolicy` (visibilidad → si no ve, `NotFoundError`), `TicketStateMachine.assertTransition(actor, ticket, to)` (409 si inválida, 403 si el rol no puede), y guarda con `saveWithEvent(ticket, event)`: *compare-and-set* sobre el estado y **creación del `TicketEvent` en la misma transacción**.
 4. El controlador serializa la salida; cualquier excepción llega al `errorHandler`, que la traduce al sobre estándar `{ error: { code, message, details, requestId } }`.
 
 ## 4. Estructura final de carpetas
@@ -94,11 +94,11 @@ siga-ti/
 │  │  │  ├─ config/        env.ts
 │  │  │  ├─ domain/
 │  │  │  │  ├─ entities/ value-objects/ policies/ services/ errors/
-│  │  │  │  └─ ports/      (repositories, unit-of-work, identity, hasher, tokens, clock)
+│  │  │  │  └─ ports/      (repositories, identity, hasher, tokens, clock)
 │  │  │  ├─ application/
 │  │  │  │  └─ use-cases/  auth/ tickets/ dashboard/ catalog/ users/
 │  │  │  ├─ infrastructure/
-│  │  │  │  ├─ persistence/ (prisma-client, repositories, unit-of-work, mappers)
+│  │  │  │  ├─ persistence/ (prisma-client, repositories, mappers)
 │  │  │  │  ├─ identity/    simulated-identity-provider.ts
 │  │  │  │  ├─ security/    argon2-password-hasher.ts, jose-token-service.ts
 │  │  │  │  ├─ logging/     logger.ts
@@ -133,9 +133,9 @@ siga-ti/
 
 - **Ingreso**: `POST /auth/login` → `IdentityProvider.authenticate()` (puerto). El adaptador simulado valida correo + contraseña (argon2id) contra el directorio ficticio. El **rol y el estado activo son locales** a SIGA-TI; un adaptador OIDC futuro solo devolvería identidad (`email`, `fullName`, `externalId`).
 - **Access token**: JWT HS256, 15 min, claims `sub`, `role`, `jti`. Se envía en `Authorization: Bearer`.
-- **Refresh token**: 32 bytes aleatorios (base64url), cookie `siga_rt` `httpOnly; SameSite=Strict; Secure (prod); Path=/api/v1/auth`, 7 días. En BD solo se guarda su **SHA-256** (alta entropía: argon2 no aporta). Cada uso **rota** el token y enlaza `replacedById`; la reutilización de un token ya rotado revoca toda la familia (`familyId`).
+- **Refresh token**: 32 bytes aleatorios (base64url), cookie `siga_rt` `httpOnly; SameSite=Strict; Secure (prod); Path=/api/v1/auth`, 7 días. En BD solo se guarda su **SHA-256** (alta entropía: argon2 no aporta). Cada uso **rota** el token (el anterior queda revocado); presentar un token ya revocado revoca todas las sesiones del usuario.
 - **Revocación inmediata**: `authenticate` recarga el usuario por PK en cada petición; desactivar o cambiar el rol surte efecto de inmediato aunque el JWT siga vigente.
-- **CSRF**: `SameSite=Strict` + cookie limitada al path de auth + verificación de cabecera `Origin` contra `CORS_ALLOWED_ORIGINS` en `refresh`/`logout`.
+- **CSRF**: `SameSite=Strict` + cookie limitada al path de auth + CORS restringido (suficiente para un prototipo con mismo origen).
 - **Fuerza bruta**: límite estricto en `/auth/login` (por IP) y respuesta uniforme `INVALID_CREDENTIALS`; verificación contra hash ficticio cuando el usuario no existe (igualar tiempos).
 - **Desarrollo**: Vite hace *proxy* de `/api` → mismo origen, sin CORS ni cookies de terceros.
 
@@ -154,43 +154,35 @@ siga-ti/
 
 Jerarquía `AppError` (dominio/aplicación) → `ValidationError 400`, `UnauthenticatedError 401`, `ForbiddenError 403`, `NotFoundError 404`, `ConflictError 409` (con subcódigos `INVALID_TRANSITION`, `INVALID_ASSIGNEE`, `CONCURRENT_MODIFICATION`, `EMAIL_ALREADY_EXISTS`), `RateLimitedError 429`. Todo lo no controlado → `500 INTERNAL_ERROR` con mensaje genérico; el detalle va solo al log (con `requestId`). Catálogo completo en `openapi.yaml`.
 
-## 9. Estrategia de pruebas
+## 9. Estrategia de pruebas (prototipo)
 
-- **Dominio**: unitarias puras (máquina de estados con tabla exhaustiva de rol×transición, políticas, SLA, código).
-- **Casos de uso**: unitarias con repositorios en memoria y `Clock` fijo.
-- **API**: integración con Supertest contra **PostgreSQL real** (BD `siga_ti_test`, migraciones aplicadas, truncado entre pruebas). No se simula Prisma: lo que importa verificar son las restricciones, transacciones y el trigger.
-- **Contrato**: prueba que el OpenAPI generado desde Zod coincide con `docs/openapi.yaml` versionado (detecta deriva).
-- **Web**: Testing Library para componentes/hooks (MSW no incluido; se mockean los servicios), Playwright para flujos E2E en Etapa 4.
+- **Dominio y casos de uso**: unitarias con repositorios en memoria y `Clock` fijo; la máquina de estados se prueba con tabla exhaustiva de rol × transición.
+- **API**: integración con Supertest contra PostgreSQL real (`siga_ti_test`) para los flujos clave: auth, crear/listar, asignar, transiciones, visibilidad y panel.
+- **Contrato**: prueba de que el OpenAPI generado coincide con `docs/openapi.yaml`.
+- **Web**: Testing Library en formularios y vistas clave; **2–3 flujos E2E** con Playwright en la Etapa 4 (ingreso, crear→asignar→resolver→cerrar, panel).
 
 ## 10. Registro de decisiones (ADR)
 
+Versión de prototipo: solo lo que condiciona la implementación.
+
 | # | Decisión | Motivo | Alternativas descartadas |
 |---|---|---|---|
-| 001 | Monorepo pnpm workspaces | Compartir contrato sin publicar paquetes | Repos separados; Nx/Turborepo (sobrecoste para 3 paquetes) |
-| 002 | Clean Architecture con puertos; regla de dependencia vigilada por ESLint | Dominio testeable y desacoplado de Prisma/Express | MVC con Prisma en controladores (acopla, difícil de probar) |
-| 003 | Composition root manual, sin contenedor DI | KISS; el grafo es pequeño | tsyringe/inversify (magia de decoradores) |
-| 004 | `UnitOfWork` como puerto; repositorios ligados a la transacción | Garantiza "cambio + evento en la misma transacción" sin filtrar Prisma al dominio | Pasar `tx` de Prisma por los casos de uso (fuga de infraestructura) |
-| 005 | Express 5 | Manejo nativo de promesas rechazadas; estándar vigente | Fastify/NestJS (el enunciado fija Express; Nest añade peso) |
-| 006 | Access JWT corto + refresh httpOnly rotado con detección de reutilización | Mitiga XSS (token no persistente) y robo de refresh | JWT en `localStorage`; sesiones de servidor; refresh sin rotación |
-| 007 | `jose` para JWT | ESM, tipado estricto, mantenimiento activo | `jsonwebtoken`; Passport (innecesario) |
-| 008 | Rol y estado activo locales; identidad externa vía `IdentityProvider` | Migrar a OIDC cambia un adaptador, no el negocio | Mezclar credenciales en casos de uso |
-| 009 | Contraseña simulada en `User.passwordHash` (nullable) | KISS; se elimina al pasar a OIDC | Tabla `SimulatedCredential` (más limpia, +1 entidad no pedida) |
-| 010 | Máquina de estados declarativa en el dominio | Auditable, probada por tabla, un solo lugar | `if/else` en casos de uso; librería XState (excesiva) |
-| 011 | `TicketEvent` con columnas tipadas (`fromStatus`, `toStatus`, `fromAssigneeId`, …) | Consultable y con restricciones; refleja el dominio | Evento genérico con JSONB (sin integridad); *event sourcing* completo (complejidad no justificada) |
-| 012 | Inmutabilidad del historial reforzada con trigger SQL | La regla sobrevive a bugs o accesos directos | Solo disciplina de código |
-| 013 | Código `SIGA-nnnnnn` derivado de columna `number` autoincremental | Secuencial sin carreras; formato cambiable sin migrar datos | Guardar el texto; `MAX()+1` (carrera) |
-| 014 | `dueAt` calculado y guardado al crear; sin pausa por `EN_ESPERA` | Estable aunque cambie la política; simple | Recalcular siempre; relojes de pausa (ver pregunta abierta) |
-| 015 | Concurrencia optimista por *compare-and-set* (`updateMany where id AND status`) | Sin columna `version`; 409 `CONCURRENT_MODIFICATION` | Bloqueo pesimista `SELECT … FOR UPDATE`; columna `version` |
-| 016 | Visibilidad: ticket no visible ⇒ 404 | Evita enumeración | 403 (revela existencia) |
-| 017 | Paginación por offset (`page`, `pageSize ≤ 100`) con desempate por `id` | Suficiente a escala de prototipo; permite saltar a página | Cursor/keyset (preparado para escala; más complejo para UI) |
-| 018 | Zod 4 como fuente única; OpenAPI 3.1 generado con `zod-to-openapi` y comparado en prueba | Sin deriva entre contrato, validación y docs | Escribir OpenAPI a mano; tRPC/ts-rest (cambian el estilo REST pedido) |
-| 019 | Enums del dominio viven en `shared`; los de Prisma se verifican con aserción de tipos | DRY sin acoplar dominio a Prisma | Duplicar sin verificación |
-| 020 | `Clock` como puerto | Pruebas de SLA y expiración deterministas | `Date.now()` disperso |
-| 021 | Pruebas de integración contra PostgreSQL real | Valida restricciones/trigger/transacciones | SQLite o mocks de Prisma (falsa confianza) |
-| 022 | `shared` como paquete interno que exporta fuente TS; API empaquetada con `tsup` (a verificar) | Sin paso de compilación intermedio | Compilar `shared` con `tsc -b` (más fricción en desarrollo) |
-| 023 | TypeScript 6.0.3 y Prisma 7.10.1 fijados | Compatibilidad con `typescript-eslint` y estabilidad | TS 7.0 (incompatible hoy); Prisma 8 RC |
-| 024 | Dashboard calculado con agregaciones SQL (`groupBy`/consultas parametrizadas) en un `DashboardReadRepository` | Lectura optimizada sin cargar entidades; separa lectura de escritura | Calcular en memoria |
-| 025 | Swagger UI en `/api/docs`, activable por variable de entorno | Documentación viva; apagable en producción | Siempre público |
+| 001 | Monorepo pnpm; `shared` como paquete interno que exporta fuente TS | Contrato único sin publicar paquetes ni paso de build | Repos separados; Nx/Turborepo |
+| 002 | Clean Architecture con puertos; capas vigiladas por ESLint; composition root manual | Dominio testeable y desacoplado de Prisma/Express | Prisma en controladores; contenedores DI |
+| 003 | Express 5 + Zod + Prisma, `jose` para JWT | Stack pedido; Express 5 maneja promesas rechazadas | Fastify/Nest; `jsonwebtoken`; Passport |
+| 004 | Transacción dentro del repositorio: `saveWithEvent(ticket, event)` | Cambio + evento atómicos sin patrón `UnitOfWork` (excesivo hoy) | `UnitOfWork` como puerto (se adopta si crece el nº de agregados) |
+| 005 | Access JWT 15 min + refresh httpOnly rotado, guardado como SHA-256 | Mitiga XSS; token no persistente en el navegador | JWT en `localStorage`; sesiones de servidor |
+| 006 | Rol y estado activo locales; identidad vía `IdentityProvider`; `passwordHash` nullable en `User` | Migrar a OIDC cambia un adaptador | Tabla de credenciales aparte |
+| 007 | Máquina de estados declarativa en el dominio | Auditable y probada por tabla | `if/else` en casos de uso; XState |
+| 008 | `TicketEvent` con columnas tipadas + trigger de solo inserción | Consultable; la regla sobrevive a bugs | JSONB genérico; event sourcing |
+| 009 | Código `SIGA-nnnnnn` derivado de `number` autoincremental | Secuencial sin carreras | `MAX()+1` |
+| 010 | `dueAt` calculado al crear; sin pausa en `EN_ESPERA` | Estable y simple | Relojes de pausa, horario hábil |
+| 011 | Concurrencia optimista por *compare-and-set* | Sin columna `version`; 409 `CONCURRENT_MODIFICATION` | Bloqueos pesimistas |
+| 012 | Solicitud no visible ⇒ 404 | Evita enumeración | 403 |
+| 013 | Paginación por offset (`pageSize ≤ 100`) | Suficiente a escala de prototipo | Cursor |
+| 014 | Zod 4 fuente única; OpenAPI 3.1 generado y comparado con `docs/openapi.yaml` en una prueba | Sin deriva | OpenAPI manual; tRPC |
+| 015 | Integración contra PostgreSQL real | Valida restricciones y transacciones | SQLite o mocks de Prisma |
+| 016 | TypeScript 6.0.3 y Prisma 7.10.1 fijados | Compatibilidad y estabilidad | TS 7; Prisma 8 RC |
 
 ## 11. Riesgos técnicos identificados
 

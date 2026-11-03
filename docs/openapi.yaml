@@ -56,7 +56,7 @@ paths:
       tags: [auth]
       operationId: refreshSession
       summary: Renueva la sesión rotando el refresh token (RF-03)
-      description: Lee la cookie `siga_rt`. Verifica `Origin`. Reutilizar un token ya rotado revoca toda la familia y responde 401.
+      description: Lee la cookie `siga_rt` y la rota. Reutilizar un token ya rotado revoca todas las sesiones del usuario y responde 401.
       security: []
       parameters:
         - in: cookie
@@ -73,7 +73,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/AuthSession' }
         '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
         '429': { $ref: '#/components/responses/RateLimited' }
         '500': { $ref: '#/components/responses/InternalError' }
 
@@ -81,12 +80,11 @@ paths:
     post:
       tags: [auth]
       operationId: logout
-      summary: Cierra la sesión y revoca la familia de refresh tokens (RF-03)
+      summary: Cierra la sesión y revoca el refresh token (RF-03)
       description: Idempotente; limpia la cookie aunque el token sea inválido.
       security: []
       responses:
         '204': { description: Sesión cerrada }
-        '403': { $ref: '#/components/responses/Forbidden' }
         '500': { $ref: '#/components/responses/InternalError' }
 
   /auth/me:
@@ -139,12 +137,8 @@ paths:
         - { in: query, name: priority, schema: { $ref: '#/components/schemas/Priority' } }
         - { in: query, name: categoryId, schema: { type: string, format: uuid } }
         - { in: query, name: assigneeId, schema: { type: string, format: uuid } }
-        - { in: query, name: unassigned, description: "Si es `true`, solo sin asignar (excluyente con `assigneeId`).", schema: { type: boolean } }
         - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
         - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
-        - in: query
-          name: sort
-          schema: { type: string, enum: [createdAt, -createdAt, dueAt, -dueAt, priority, -priority], default: -createdAt }
       responses:
         '200':
           description: Página de solicitudes
@@ -391,7 +385,6 @@ paths:
       summary: Listar categorías
       description: Todo usuario autenticado ve las activas. `includeInactive=true` solo para ADMIN (403 en otro caso).
       parameters:
-        - { in: query, name: includeInactive, schema: { type: boolean, default: false } }
       responses:
         '200':
           description: Categorías
@@ -407,124 +400,31 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '500': { $ref: '#/components/responses/InternalError' }
-    post:
-      tags: [categories]
-      operationId: createCategory
-      summary: Crear categoría (RF-12, opcional)
-      description: Solo ADMIN.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/CreateCategoryRequest' }
-      responses:
-        '201':
-          description: Categoría creada
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Category' }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '500': { $ref: '#/components/responses/InternalError' }
-
-  /categories/{categoryId}:
-    patch:
-      tags: [categories]
-      operationId: updateCategory
-      summary: Editar o desactivar categoría (RF-12, opcional)
-      description: Solo ADMIN.
-      parameters:
-        - { in: path, name: categoryId, required: true, schema: { type: string, format: uuid } }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/UpdateCategoryRequest' }
-      responses:
-        '200':
-          description: Categoría actualizada
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Category' }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '500': { $ref: '#/components/responses/InternalError' }
-
   /users:
     get:
       tags: [users]
       operationId: listUsers
-      summary: Listar usuarios
-      description: |
-        ADMIN: todos. SUPERVISOR: solo puede consultar `role=TECNICO` (para asignar); otro filtro o ausencia de `role` responde 403.
+      summary: Listar usuarios (para elegir técnico al asignar)
+      description: "Roles SUPERVISOR y ADMIN. Sin paginación (prototipo: pocos usuarios)."
       parameters:
         - { in: query, name: role, schema: { $ref: '#/components/schemas/Role' } }
         - { in: query, name: isActive, schema: { type: boolean } }
-        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
-        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
       responses:
         '200':
-          description: Página de usuarios
+          description: Usuarios
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/UserPage' }
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/User' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '500': { $ref: '#/components/responses/InternalError' }
-    post:
-      tags: [users]
-      operationId: createUser
-      summary: Crear usuario (RF-12, opcional)
-      description: Solo ADMIN. Crea la entrada en el directorio simulado con la contraseña enviada.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/CreateUserRequest' }
-      responses:
-        '201':
-          description: Usuario creado
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/User' }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '500': { $ref: '#/components/responses/InternalError' }
-
-  /users/{userId}:
-    patch:
-      tags: [users]
-      operationId: updateUser
-      summary: Cambiar rol, nombre o estado (RF-12, opcional)
-      description: Solo ADMIN. Un admin no puede desactivarse ni quitarse su propio rol (409). Desactivar revoca sus refresh tokens.
-      parameters:
-        - { in: path, name: userId, required: true, schema: { type: string, format: uuid } }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/UpdateUserRequest' }
-      responses:
-        '200':
-          description: Usuario actualizado
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/User' }
-        '400': { $ref: '#/components/responses/ValidationError' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '500': { $ref: '#/components/responses/InternalError' }
-
   /health:
     get:
       tags: [health]
@@ -541,24 +441,6 @@ paths:
                 required: [status]
                 properties:
                   status: { type: string, const: ok }
-  /health/ready:
-    get:
-      tags: [health]
-      operationId: getReadiness
-      summary: Readiness (verifica la base de datos)
-      security: []
-      responses:
-        '200':
-          description: Listo
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [status]
-                properties:
-                  status: { type: string, const: ok }
-        '500': { $ref: '#/components/responses/InternalError' }
-
 components:
   securitySchemes:
     bearerAuth:
@@ -580,7 +462,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
     Unauthorized:
-      description: "401 — `UNAUTHENTICATED`, `INVALID_CREDENTIALS` o `TOKEN_EXPIRED`."
+      description: "401 — `UNAUTHENTICATED` o `INVALID_CREDENTIALS`."
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -595,7 +477,7 @@ components:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
     Conflict:
-      description: "409 — `INVALID_TRANSITION`, `INVALID_ASSIGNEE`, `CONCURRENT_MODIFICATION`, `TICKET_CLOSED`, `DUPLICATE_RESOURCE` o `SELF_PROTECTION`."
+      description: "409 — `INVALID_TRANSITION`, `INVALID_ASSIGNEE`, `CONCURRENT_MODIFICATION` o `TICKET_CLOSED`."
       content:
         application/json:
           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -635,15 +517,12 @@ components:
         - VALIDATION_ERROR
         - UNAUTHENTICATED
         - INVALID_CREDENTIALS
-        - TOKEN_EXPIRED
         - FORBIDDEN
         - NOT_FOUND
         - INVALID_TRANSITION
         - INVALID_ASSIGNEE
         - CONCURRENT_MODIFICATION
         - TICKET_CLOSED
-        - DUPLICATE_RESOURCE
-        - SELF_PROTECTION
         - RATE_LIMITED
         - INTERNAL_ERROR
 
@@ -699,33 +578,6 @@ components:
       properties:
         id: { type: string, format: uuid }
         fullName: { type: string }
-    CreateUserRequest:
-      type: object
-      required: [email, fullName, role, password]
-      additionalProperties: false
-      properties:
-        email: { type: string, format: email, maxLength: 254 }
-        fullName: { type: string, minLength: 2, maxLength: 120 }
-        role: { $ref: '#/components/schemas/Role' }
-        password: { type: string, minLength: 12, maxLength: 128 }
-    UpdateUserRequest:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        fullName: { type: string, minLength: 2, maxLength: 120 }
-        role: { $ref: '#/components/schemas/Role' }
-        isActive: { type: boolean }
-    UserPage:
-      allOf:
-        - $ref: '#/components/schemas/PageMeta'
-        - type: object
-          required: [items]
-          properties:
-            items:
-              type: array
-              items: { $ref: '#/components/schemas/User' }
-
     Category:
       type: object
       required: [id, name, description, isActive]
@@ -734,22 +586,6 @@ components:
         name: { type: string }
         description: "{ type: [string, 'null'] }"
         isActive: { type: boolean }
-    CreateCategoryRequest:
-      type: object
-      required: [name]
-      additionalProperties: false
-      properties:
-        name: { type: string, minLength: 2, maxLength: 80 }
-        description: "{ type: string, maxLength: 255 }"
-    UpdateCategoryRequest:
-      type: object
-      additionalProperties: false
-      minProperties: 1
-      properties:
-        name: { type: string, minLength: 2, maxLength: 80 }
-        description: "{ type: [string, 'null'], maxLength: 255 }"
-        isActive: { type: boolean }
-
     PageMeta:
       type: object
       required: [page, pageSize, totalItems, totalPages]
@@ -761,7 +597,7 @@ components:
 
     Ticket:
       type: object
-      required: [id, code, title, description, category, priority, status, requester, assignee, dueAt, isOverdue, resolvedAt, closedAt, createdAt, updatedAt, allowedActions]
+      required: [id, code, title, description, category, priority, status, requester, assignee, dueAt, isOverdue, resolvedAt, closedAt, createdAt, updatedAt]
       properties:
         id: { type: string, format: uuid }
         code: { type: string, pattern: '^SIGA-\d{6,}$', examples: ['SIGA-000123'] }
@@ -786,17 +622,6 @@ components:
         closedAt: { type: [string, 'null'], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
-        allowedActions:
-          type: object
-          description: Acciones disponibles para el usuario actual; la UI las usa para mostrar/ocultar controles (la API vuelve a validar siempre).
-          required: [canAssign, transitions, canComment, canCommentInternal]
-          properties:
-            canAssign: { type: boolean }
-            transitions:
-              type: array
-              items: { $ref: '#/components/schemas/TicketStatus' }
-            canComment: { type: boolean }
-            canCommentInternal: { type: boolean }
     TicketPage:
       allOf:
         - $ref: '#/components/schemas/PageMeta'

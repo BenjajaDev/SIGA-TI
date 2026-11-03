@@ -11,14 +11,9 @@ Toda variable se valida **al arrancar** (`apps/api/src/config/env.ts`); si falla
 | `LOG_LEVEL` | no | `info` | `fatal`…`trace`, `silent` |
 | `DATABASE_URL` | sí | — | URL PostgreSQL (`postgresql://…`) |
 | `CORS_ALLOWED_ORIGINS` | sí | — | Orígenes separados por coma, sin ruta ni `*` |
-| `TRUST_PROXY_HOPS` | no | `0` | Saltos de proxy confiables (para IP real en rate limit) |
 | `JWT_ACCESS_SECRET` | sí | — | ≥ 32 caracteres; en producción no puede ser el valor de ejemplo |
-| `JWT_ACCESS_TTL_SECONDS` | no | `900` | Vigencia del access token (60–3600) |
-| `REFRESH_TOKEN_TTL_DAYS` | no | `7` | Vigencia del refresh token (1–30) |
 | `COOKIE_SECURE` | no | `false` | Debe ser `true` en producción |
-| `RATE_LIMIT_LOGIN_MAX` / `_WINDOW_SECONDS` | no | `10` / `900` | Límite de intentos de ingreso por IP |
-| `RATE_LIMIT_GLOBAL_MAX` / `_WINDOW_SECONDS` | no | `300` / `60` | Límite general por IP |
-| `SWAGGER_ENABLED` | no | `true` (`false` si producción) | Sirve `/api/docs` |
+| `RATE_LIMIT_LOGIN_MAX` | no | `10` | Intentos de ingreso por IP cada 15 min |
 | `POSTGRES_USER` / `_PASSWORD` / `_DB` / `_PORT` | sí (Compose) | — | Solo para `docker-compose.yml` |
 | `TEST_DATABASE_URL` | sí (pruebas) | — | BD `siga_ti_test` para integración |
 | `SEED_DEFAULT_PASSWORD` | sí (semillas) | — | ≥ 12 caracteres; las semillas se niegan a correr en producción |
@@ -52,16 +47,9 @@ export const envSchema = z
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
     DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
     CORS_ALLOWED_ORIGINS: originList,
-    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
     JWT_ACCESS_SECRET: z.string().min(32),
-    JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
-    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
     COOKIE_SECURE: z.stringbool().default(false),
     RATE_LIMIT_LOGIN_MAX: z.coerce.number().int().min(1).default(10),
-    RATE_LIMIT_LOGIN_WINDOW_SECONDS: z.coerce.number().int().min(1).default(900),
-    RATE_LIMIT_GLOBAL_MAX: z.coerce.number().int().min(1).default(300),
-    RATE_LIMIT_GLOBAL_WINDOW_SECONDS: z.coerce.number().int().min(1).default(60),
-    SWAGGER_ENABLED: z.stringbool().optional(),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV !== 'production') return;
@@ -71,11 +59,7 @@ export const envSchema = z
     if (env.JWT_ACCESS_SECRET.startsWith(PLACEHOLDER_SECRET_PREFIX)) {
       ctx.addIssue({ code: 'custom', path: ['JWT_ACCESS_SECRET'], message: 'No use el valor de ejemplo en producción' });
     }
-  })
-  .transform((env) => ({
-    ...env,
-    SWAGGER_ENABLED: env.SWAGGER_ENABLED ?? env.NODE_ENV !== 'production',
-  }));
+  });
 
 export type Env = Readonly<z.infer<typeof envSchema>>;
 
@@ -99,4 +83,6 @@ Detalle intencional: se usa `z.stringbool()` y no `z.coerce.boolean()` porque es
 
 ## `.env.example`
 
-Ver [`.env.example`](./.env.example). Se copiará a la raíz del repo en la Etapa 2. `.env` y `.env.test` van en `.gitignore`; solo `.env.example` se versiona, con valores **de ejemplo no utilizables en producción**.
+Ver [`.env.example`](./.env.example). Se copiará a la raíz del repo en la Etapa 2. Constantes en código (no configurables, KISS): access token 15 min, refresh token 7 días, ventana de límite de ingreso 15 min, límite general 300 peticiones/min, Swagger activo salvo en producción.
+
+`.env` y `.env.test` van en `.gitignore`; solo `.env.example` se versiona, con valores **de ejemplo no utilizables en producción**.

@@ -21,7 +21,6 @@ TypeScript **6.0.3** (7.0.x excluido: incompatible con `typescript-eslint` 8.72,
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "noPropertyAccessFromIndexSignature": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "useUnknownInCatchVariables": true,
@@ -73,7 +72,7 @@ Reglas innegociables (todas `error`):
 | `apps/web/src/services/**` | `react`, `@tanstack/*` |
 | `apps/web/src/components/**`, `pages/**` | `services/*` (la UI solo habla con hooks) |
 
-Bloques adicionales: `eslint-plugin-react-hooks` y `eslint-plugin-jsx-a11y` (recommended) para `apps/web`; en pruebas se relaja únicamente `no-non-null-assertion` y `unbound-method`, **nunca** `no-explicit-any`. Ignorados: `dist`, `generated` (cliente Prisma), `coverage`.
+Bloque adicional: `eslint-plugin-react-hooks` (recommended) para `apps/web`; en pruebas se relaja únicamente `no-non-null-assertion` y `unbound-method`, **nunca** `no-explicit-any`. Ignorados: `dist`, `generated` (cliente Prisma), `coverage`.
 
 ## 3. Prettier (`prettier.config.mjs`)
 
@@ -93,20 +92,17 @@ ESLint no contiene reglas de formato (evita conflictos); Prettier corre aparte. 
 
 ## 4. Husky y scripts
 
-- `pre-commit`: `lint-staged` → `eslint --fix --max-warnings 0` y `prettier --write` sobre archivos staged.
-- `pre-push`: `pnpm typecheck && pnpm test:unit`.
-- Las pruebas de integración/E2E no corren en hooks (requieren BD); se ejecutan con `pnpm test:integration` y en la Etapa 4.
-
-Scripts raíz previstos: `dev`, `build`, `lint`, `format:check`, `typecheck`, `test`, `test:unit`, `test:integration`, `test:e2e`, `db:up`, `db:migrate`, `db:seed`, `db:seed:demo`, `db:reset`, `openapi:generate`.
+- `pre-commit`: `lint-staged` → `eslint --fix --max-warnings 0` y `prettier --write` sobre archivos staged. Sin hook `pre-push` (prototipo).
+- Scripts raíz: `dev`, `build`, `lint`, `typecheck`, `test`, `test:e2e`, `db:up`, `db:migrate`, `db:seed`, `db:seed:demo`, `db:reset`, `openapi:generate`.
 
 ## 5. Vitest
 
-Proyectos por paquete (`vitest.workspace`/`projects`): `shared` y `api-unit` (node, sin BD), `api-integration` (node, `pool: forks`, `fileParallelism: false`, setup que aplica migraciones a `siga_ti_test` y trunca entre pruebas), `web` (jsdom + Testing Library). Cobertura con v8; umbral inicial propuesto: dominio ≥ 95 %, aplicación ≥ 85 %, global ≥ 80 %.
+Un único `vitest` con proyectos: `shared` + `api` (node; la integración usa `siga_ti_test` con migraciones aplicadas y truncado entre pruebas, en serie) y `web` (jsdom + Testing Library). Sin umbrales de cobertura (se reporta, no se exige).
 
-## 6. Definición de terminado (comandos)
+## 5. Definición de terminado (comandos)
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test
 ```
 
-sin errores ni *warnings* (`--max-warnings 0`).
+sin errores ni *warnings*.

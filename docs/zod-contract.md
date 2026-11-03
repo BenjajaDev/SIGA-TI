@@ -68,10 +68,9 @@ export type PageQuery = z.infer<typeof pageQuerySchema>;
 import { z } from 'zod';
 
 export const ERROR_CODES = [
-  'VALIDATION_ERROR', 'UNAUTHENTICATED', 'INVALID_CREDENTIALS', 'TOKEN_EXPIRED',
+  'VALIDATION_ERROR', 'UNAUTHENTICATED', 'INVALID_CREDENTIALS',
   'FORBIDDEN', 'NOT_FOUND', 'INVALID_TRANSITION', 'INVALID_ASSIGNEE',
-  'CONCURRENT_MODIFICATION', 'TICKET_CLOSED', 'DUPLICATE_RESOURCE', 'SELF_PROTECTION',
-  'RATE_LIMITED', 'INTERNAL_ERROR',
+  'CONCURRENT_MODIFICATION', 'TICKET_CLOSED', 'RATE_LIMITED', 'INTERNAL_ERROR',
 ] as const;
 
 export const errorCodeSchema = z.enum(ERROR_CODES).meta({ id: 'ErrorCode' });
@@ -114,25 +113,7 @@ export const userSchema = z
   })
   .meta({ id: 'User' });
 
-export const createUserRequestSchema = z
-  .strictObject({
-    email: z.email().max(254).transform((v) => v.toLowerCase()),
-    fullName: z.string().trim().min(2).max(120),
-    role: roleSchema,
-    password: z.string().min(12, 'Mínimo 12 caracteres').max(128),
-  })
-  .meta({ id: 'CreateUserRequest' });
-
-export const updateUserRequestSchema = z
-  .strictObject({
-    fullName: z.string().trim().min(2).max(120).optional(),
-    role: roleSchema.optional(),
-    isActive: z.boolean().optional(),
-  })
-  .refine((v) => Object.keys(v).length > 0, 'Debe indicar al menos un campo')
-  .meta({ id: 'UpdateUserRequest' });
-
-export const listUsersQuerySchema = pageQuerySchema.extend({
+export const listUsersQuerySchema = z.object({
   role: roleSchema.optional(),
   isActive: z.stringbool().optional(),
 });
@@ -145,33 +126,12 @@ export const categorySchema = z
   .object({ id: uuidSchema, name: z.string(), description: z.string().nullable(), isActive: z.boolean() })
   .meta({ id: 'Category' });
 
-export const createCategoryRequestSchema = z
-  .strictObject({ name: z.string().trim().min(2).max(80), description: z.string().trim().max(255).optional() })
-  .meta({ id: 'CreateCategoryRequest' });
-
-export const updateCategoryRequestSchema = z
-  .strictObject({
-    name: z.string().trim().min(2).max(80).optional(),
-    description: z.string().trim().max(255).nullable().optional(),
-    isActive: z.boolean().optional(),
-  })
-  .refine((v) => Object.keys(v).length > 0, 'Debe indicar al menos un campo')
-  .meta({ id: 'UpdateCategoryRequest' });
-
-export const listCategoriesQuerySchema = z.object({ includeInactive: z.stringbool().default(false) });
 ```
 
 ## `tickets.ts`
 
 ```ts
 const TICKET_CODE_PATTERN = /^SIGA-\d{6,}$/;
-
-export const allowedActionsSchema = z.object({
-  canAssign: z.boolean(),
-  transitions: z.array(ticketStatusSchema),
-  canComment: z.boolean(),
-  canCommentInternal: z.boolean(),
-});
 
 export const ticketSchema = z
   .object({
@@ -190,7 +150,6 @@ export const ticketSchema = z
     closedAt: isoDateTimeSchema.nullable(),
     createdAt: isoDateTimeSchema,
     updatedAt: isoDateTimeSchema,
-    allowedActions: allowedActionsSchema,
   })
   .meta({ id: 'Ticket' });
 
@@ -215,21 +174,12 @@ export const transitionTicketRequestSchema = z
   })
   .meta({ id: 'TransitionTicketRequest' });
 
-export const TICKET_SORTS = ['createdAt', '-createdAt', 'dueAt', '-dueAt', 'priority', '-priority'] as const;
-
-export const listTicketsQuerySchema = pageQuerySchema
-  .extend({
-    status: ticketStatusSchema.optional(),
-    priority: prioritySchema.optional(),
-    categoryId: uuidSchema.optional(),
-    assigneeId: uuidSchema.optional(),
-    unassigned: z.stringbool().optional(),
-    sort: z.enum(TICKET_SORTS).default('-createdAt'),
-  })
-  .refine((q) => !(q.unassigned && q.assigneeId), {
-    path: ['unassigned'],
-    error: 'No puede combinar "sin asignar" con un técnico',
-  });
+export const listTicketsQuerySchema = pageQuerySchema.extend({
+  status: ticketStatusSchema.optional(),
+  priority: prioritySchema.optional(),
+  categoryId: uuidSchema.optional(),
+  assigneeId: uuidSchema.optional(),
+});
 
 export const ticketPageSchema = paginated(ticketSchema).meta({ id: 'TicketPage' });
 ```
@@ -317,6 +267,8 @@ export const resolutionMetricsSchema = z
 Reexporta todo lo anterior (`export * from './enums'`, …). Sin lógica.
 
 ## Notas de diseño
+
+- Prototipo: orden fijo de listados (`createdAt` descendente); sin esquemas de administración (RF-12 fuera del contrato).
 
 - `shared` no depende de Express ni de Prisma; sí de `zod`. El dominio de la API importa **solo** `enums.ts` (constantes y tipos).
 - Los enums de Prisma se verifican contra estos en tiempo de compilación (ADR-019) con aserciones del tipo `satisfies Record<PrismaRole, true>`.
