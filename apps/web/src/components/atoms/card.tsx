@@ -17,7 +17,7 @@ export function Card({ title, actions, className, children }: CardProps) {
       )}
     >
       {title !== undefined && (
-        <header className="flex items-center justify-between gap-3 border-b border-surface-border bg-surface/75 px-5 py-3.5">
+        <header className="flex items-center justify-between gap-3 border-b border-surface-border bg-brand-gradient-soft px-5 py-3.5">
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>
           {actions}
         </header>

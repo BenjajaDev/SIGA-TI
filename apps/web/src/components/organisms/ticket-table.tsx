@@ -8,7 +8,7 @@ export function TicketTable({ tickets }: { readonly tickets: readonly Ticket[] }
     <div className="overflow-x-auto rounded-2xl border border-surface-border bg-surface shadow-brand-card">
       <table className="min-w-full divide-y divide-slate-200 text-sm">
         <caption className="sr-only">Listado de solicitudes</caption>
-        <thead className="bg-brand-50 text-left text-xs uppercase tracking-wide text-slate-600">
+        <thead className="bg-brand-gradient-soft text-left text-xs uppercase tracking-wide text-slate-600">
           <tr>
             <th scope="col" className="px-4 py-3">
               Código

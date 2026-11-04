@@ -19,7 +19,7 @@ const linkClass = ({ isActive }: { isActive: boolean }): string =>
   clsx(
     'group relative flex min-h-12 items-center gap-3 rounded-xl px-3 text-base font-normal transition-all duration-200',
     isActive
-      ? 'bg-white/12 font-medium text-white shadow-sm ring-1 ring-white/20 before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent'
+      ? 'bg-brand-gradient-active font-medium text-white shadow-sm ring-1 ring-white/20 before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent'
       : 'text-white/85 hover:bg-white/10 hover:text-white',
   );
 
@@ -152,7 +152,7 @@ export function AppShell() {
       <aside
         aria-label="Navegación principal"
         className={clsx(
-          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-white/10 bg-shell-sidebar px-4 py-5 text-white shadow-2xl shadow-slate-950/15',
+          'fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-white/10 bg-shell-sidebar bg-shell-gradient px-4 py-5 text-white shadow-2xl shadow-slate-950/15',
           'transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none lg:translate-x-0',
           sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full',
         )}

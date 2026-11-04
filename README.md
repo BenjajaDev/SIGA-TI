@@ -26,7 +26,16 @@ pnpm --filter @siga/web dev     # Web en http://localhost:5173 (proxy /api → A
 - Documentación interactiva: http://localhost:3000/api/docs (desactivada en producción)
 - Colores, logo y nombre de la institución: ingrese como `admin@siga-ti.test` → **Apariencia**.
 - Gestión de cuentas: como ADMIN, ingrese en **Usuarios** para crear, editar, desactivar o reactivar usuarios; desactivar conserva sus solicitudes e historial.
-- Usuarios ficticios (`@siga-ti.test`): `admin`, `supervisor`, `tecnico1..3`, `solicitante1..5`; contraseña = `SEED_DEFAULT_PASSWORD` del `.env`.
+- Cuentas de acceso por defecto (las crea `pnpm db:seed`; contraseña común = `SEED_DEFAULT_PASSWORD`, en `.env.example`: `Demo-Siga-2026!`):
+
+| Rol           | Correo                                                | Nombre                                                                        |
+| ------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Administrador | `admin@siga-ti.test`                                  | Carolina Fuentes                                                              |
+| Supervisor    | `supervisor@siga-ti.test`                             | Rodrigo Valdés                                                                |
+| Técnico       | `tecnico1@siga-ti.test` · `tecnico2@…` · `tecnico3@…` | Matías Orellana · Daniela Riquelme · Felipe Contreras                         |
+| Solicitante   | `solicitante1@siga-ti.test` … `solicitante5@…`        | Javiera Muñoz, Sebastián Pizarro, Camila Araya, Tomás Herrera, Valentina Soto |
+
+- **Botones de demostración**: con `VITE_SHOW_DEMO_ACCOUNTS=true` y `VITE_DEMO_PASSWORD` definidos, la pantalla de ingreso muestra las cuentas; al tocar una se rellenan el correo y la contraseña del formulario (hay que pulsar «Ingresar»). Deje `VITE_SHOW_DEMO_ACCOUNTS` en `false` fuera de desarrollo: la contraseña quedaría visible en el bundle.
 
 ## Scripts
 

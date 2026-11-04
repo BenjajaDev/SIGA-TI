@@ -6,6 +6,7 @@ import { PageHeader } from '../components/molecules/page-header';
 import { QueryState } from '../components/molecules/query-state';
 import { CommentThread } from '../components/organisms/comment-thread';
 import { EventTimeline } from '../components/organisms/event-timeline';
+import { TicketProgress } from '../components/organisms/ticket-progress';
 import { TicketActions } from '../components/organisms/ticket-actions';
 import { useTicket, useTicketEvents } from '../hooks/use-tickets';
 import { formatDateTime } from '../lib/format';
@@ -50,6 +51,9 @@ export function TicketDetailPage() {
               </div>
             }
           />
+          <Card className="mb-6">
+            <TicketProgress status={ticket.data.status} />
+          </Card>
           <div className="grid gap-6 lg:grid-cols-3">
             <div className="space-y-6 lg:col-span-2">
               <Card title="Descripción">

@@ -22,6 +22,12 @@
   --surface-muted: color-mix(in srgb, var(--brand-primary) 4%, #f8fafc);
   --surface-border: color-mix(in srgb, var(--brand-primary) 12%, #e2e8f0);
   --chart-grid: color-mix(in srgb, var(--brand-primary) 12%, #e2e8f0);
+  --brand-gradient-soft: linear-gradient(
+    var(--brand-angle),
+    color-mix(in srgb, var(--brand-primary) 9%, white),
+    color-mix(in srgb, var(--brand-secondary) 10%, white)
+  );
+  --pattern-line: color-mix(in srgb, white 13%, transparent);
   --shadow-card: 0 12px 32px -22px color-mix(in srgb, var(--brand-primary) 30%, #0f172a);
   color-scheme: light;
 }
@@ -47,6 +53,63 @@
 
 @utility bg-brand-gradient {
   background-image: var(--brand-gradient);
+}
+
+@utility bg-brand-gradient-soft {
+  background-image: var(--brand-gradient-soft);
+}
+
+@utility bg-shell-gradient {
+  background-image: linear-gradient(
+    180deg,
+    var(--shell-sidebar) 0%,
+    color-mix(in srgb, var(--shell-sidebar) 62%, var(--brand-secondary-deep)) 100%
+  );
+}
+
+@utility bg-brand-gradient-active {
+  background-image: linear-gradient(
+    90deg,
+    color-mix(in srgb, white 20%, transparent),
+    color-mix(in srgb, white 6%, transparent)
+  );
+}
+
+/* Patrón de cuadrícula: dos linear-gradient cruzados con el color de línea del tema. */
+@utility pattern-grid {
+  background-image:
+    linear-gradient(var(--pattern-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--pattern-line) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Patrón de rayas diagonales con repeating-linear-gradient. */
+@utility pattern-stripes {
+  background-image: repeating-linear-gradient(
+    135deg,
+    var(--pattern-line) 0 2px,
+    transparent 2px 14px
+  );
+}
+
+@utility mask-fade-left {
+  mask-image: linear-gradient(to left, black 0%, transparent 75%);
+}
+
+@utility text-brand-gradient {
+  background-image: var(--brand-gradient);
+  background-clip: text;
+  color: transparent;
+}
+
+@utility hairline-gradient {
+  height: 1px;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--brand-primary) 35%, transparent),
+    transparent
+  );
 }
 
 @utility shadow-brand-card {

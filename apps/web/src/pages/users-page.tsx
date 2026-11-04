@@ -90,6 +90,7 @@ export function UsersPage() {
         subtitle="Cree cuentas, cambie roles y gestione el acceso al sistema."
         actions={
           <Button
+            variant="inverse"
             onClick={() => {
               setEditingUser(null);
               setFormOpen(true);

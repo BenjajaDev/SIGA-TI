@@ -43,7 +43,7 @@ export function TicketsPage() {
         }
         actions={
           user.role !== 'ADMIN' && (
-            <Link to="/tickets/nueva" className={buttonClasses('primary')}>
+            <Link to="/tickets/nueva" className={buttonClasses('inverse')}>
               Nueva solicitud
             </Link>
           )

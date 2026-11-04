@@ -1,14 +1,16 @@
 import clsx from 'clsx';
 import type { ComponentPropsWithRef } from 'react';
 
-type Variant = 'primary' | 'secondary' | 'danger' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'danger' | 'ghost' | 'inverse';
 
 const VARIANT: Readonly<Record<Variant, string>> = {
   primary:
-    'bg-brand-700 text-white shadow-sm shadow-brand-900/15 hover:-translate-y-px hover:bg-brand-800 hover:shadow-md disabled:bg-brand-300',
+    'bg-brand-gradient text-white shadow-sm shadow-brand-900/20 hover:-translate-y-px hover:brightness-110 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:brightness-100',
   secondary:
     'bg-surface text-slate-800 ring-1 ring-inset ring-surface-border hover:bg-brand-50 hover:text-brand-800 disabled:text-slate-400',
   danger: 'bg-red-700 text-white hover:bg-red-800 disabled:bg-red-300',
+  inverse:
+    'bg-white text-brand-800 shadow-sm hover:-translate-y-px hover:bg-white/90 hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-60',
   ghost: 'text-slate-700 hover:bg-slate-100 disabled:text-slate-400',
 };
 

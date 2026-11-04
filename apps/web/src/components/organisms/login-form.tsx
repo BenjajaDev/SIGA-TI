@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginRequestSchema } from '@siga/shared';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { errorMessage } from '../../services/api-error';
@@ -11,19 +11,34 @@ import { FormField } from '../molecules/form-field';
 
 type LoginValues = z.input<typeof loginRequestSchema>;
 
+export interface LoginPrefill {
+  readonly email: string;
+  readonly password: string;
+  /** Cambia en cada selección para volver a aplicar los mismos valores. */
+  readonly nonce: number;
+}
+
 interface LoginFormProps {
+  readonly prefill?: LoginPrefill | null;
   readonly onSubmit: (values: { email: string; password: string }) => Promise<void>;
 }
 
-export function LoginForm({ onSubmit }: LoginFormProps) {
+export function LoginForm({ onSubmit, prefill = null }: LoginFormProps) {
   const [serverError, setServerError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues, unknown, z.output<typeof loginRequestSchema>>({
     resolver: zodResolver(loginRequestSchema),
   });
+
+  useEffect(() => {
+    if (prefill === null) return;
+    setValue('email', prefill.email, { shouldValidate: true });
+    setValue('password', prefill.password, { shouldValidate: true });
+  }, [prefill, setValue]);
 
   const submit = handleSubmit(async (values) => {
     setServerError(null);

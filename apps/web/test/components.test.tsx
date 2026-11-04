@@ -123,7 +123,7 @@ describe('TicketActions', () => {
 
   it('el administrador no tiene acciones', () => {
     render(<TicketActions ticket={ticket('EN_PROGRESO')} user={user('ADMIN', 'adm')} />);
-    expect(screen.getByText(/No tiene acciones disponibles/)).toBeInTheDocument();
+    expect(screen.getByText(/acceso de consulta/)).toBeInTheDocument();
   });
 });
 

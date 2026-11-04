@@ -19,6 +19,8 @@ Toda variable se valida **al arrancar** (`apps/api/src/config/env.ts`); si falla
 | `SEED_DEFAULT_PASSWORD` | sí (semillas) | — | ≥ 12 caracteres; las semillas se niegan a correr en producción |
 | `VITE_API_BASE_URL` | no (web) | `/api/v1` | Base de la API en el cliente |
 | `VITE_DEV_API_PROXY_TARGET` | no (web, dev) | `http://localhost:3000` | Destino del proxy de Vite |
+| `VITE_SHOW_DEMO_ACCOUNTS` | no (web) | `false` | Muestra en el login botones que rellenan las cuentas de demostración (solo desarrollo) |
+| `VITE_DEMO_PASSWORD` | solo si lo anterior es `true` | — | Contraseña que se muestra y se rellena; debe coincidir con `SEED_DEFAULT_PASSWORD` |
 
 `CORS_ALLOWED_ORIGINS` y `COOKIE_SECURE` no tienen valor por defecto inseguro; un `*` o un origen con ruta falla la validación.
 
