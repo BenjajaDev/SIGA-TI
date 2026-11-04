@@ -5,7 +5,8 @@
 - Monorepo pnpm (`apps/api`, `packages/shared`), TypeScript 6.0.3 estricto, ESLint 10 + typescript-eslint (sin `any`, reglas de capas), Prettier, Husky + lint-staged.
 - PostgreSQL: `docker-compose.yml`, esquema Prisma 7.10.1, migración inicial con SQL manual (CHECK de asignación, SLA positivo y trigger de historial de solo inserción) y semillas idempotentes (`db:seed`).
 - Dominio: máquina de estados declarativa, políticas de visibilidad y comentarios, SLA, código `SIGA-nnnnnn`, métricas de resolución.
-- 18 casos de uso y 19 endpoints bajo `/api/v1` con sobre de error estándar, `requestId`, helmet, CORS restringido, límite de peticiones y rotación de refresh tokens con detección de reutilización.
+- 21 casos de uso y 22 endpoints bajo `/api/v1` con sobre de error estándar, `requestId`, helmet, CORS restringido, límite de peticiones y rotación de refresh tokens con detección de reutilización.
+- Administración de usuarios solo para ADMIN: creación, edición, cambio de contraseña, desactivación lógica y reactivación; los cambios sensibles revocan refresh tokens en la misma transacción.
 - Contrato OpenAPI 3.1 **generado desde Zod** (`docs/openapi.yaml`) + Swagger UI en `/api/docs`.
 - 151 pruebas: dominio (matriz exhaustiva rol × transición), casos de uso con dobles, contrato, y API contra PostgreSQL real.
 
@@ -20,7 +21,7 @@
 | `.env.test` | No se usa: las pruebas leen `TEST_DATABASE_URL` del `.env`. |
 | Migración | Los nombres de columna son camelCase (convención por defecto de Prisma), no snake_case como en el borrador de `data-model.md`. |
 | `seed:demo` | Se difiere a la Etapa 4, como estaba planificado. |
-| RF-12 | Fuera del contrato (decisión aprobada). |
+| RF-12 | Se incorporó administración de usuarios por petición posterior; administración de categorías sigue fuera del contrato. |
 
 ## Hallazgos durante la implementación
 

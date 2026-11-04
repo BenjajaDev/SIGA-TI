@@ -20,7 +20,7 @@ export function ResolutionPanel() {
   const metrics = useDashboardResolution(range);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="max-w-xs">
         <FormField id="range" label="Periodo (por fecha de resolución)">
           <Select
@@ -42,7 +42,7 @@ export function ResolutionPanel() {
       </div>
       <QueryState isPending={metrics.isPending} error={metrics.error}>
         {metrics.data !== undefined && (
-          <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             <StatCard label="Resueltas" value={metrics.data.resolvedCount} />
             <StatCard
               label="Tiempo medio de resolución"

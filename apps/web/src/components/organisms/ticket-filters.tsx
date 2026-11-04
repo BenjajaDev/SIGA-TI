@@ -20,7 +20,7 @@ export function TicketFilters({ value, categories, technicians, onChange }: Tick
   return (
     <form
       aria-label="Filtros"
-      className="mb-4 grid gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-5"
+      className="mb-4 grid gap-3 rounded-2xl border border-surface-border bg-surface p-4 shadow-brand-card sm:grid-cols-2 lg:grid-cols-5"
       onSubmit={(event) => {
         event.preventDefault();
       }}

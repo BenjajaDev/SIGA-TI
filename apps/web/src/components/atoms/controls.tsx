@@ -2,12 +2,12 @@ import clsx from 'clsx';
 import type { ComponentPropsWithRef } from 'react';
 
 const CONTROL =
-  'block w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900 shadow-sm ' +
-  'placeholder:text-slate-400 focus-visible:outline-2 focus-visible:outline-offset-0 ' +
-  'focus-visible:outline-brand-700 disabled:bg-slate-100 disabled:text-slate-500';
+  'block w-full rounded-xl border bg-surface px-3 py-2.5 text-sm text-slate-900 shadow-sm ' +
+  'placeholder:text-slate-400 transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-0 ' +
+  'focus-visible:outline-brand-700 disabled:bg-surface-muted disabled:text-slate-500';
 
 const border = (invalid: boolean | undefined): string =>
-  invalid === true ? 'border-red-500' : 'border-slate-300';
+  invalid === true ? 'border-red-500' : 'border-surface-border';
 
 type WithInvalid<T> = T & { readonly invalid?: boolean };
 

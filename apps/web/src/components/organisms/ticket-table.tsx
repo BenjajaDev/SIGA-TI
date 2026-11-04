@@ -5,10 +5,10 @@ import { OverdueBadge, PriorityBadge, StatusBadge } from '../atoms/badge';
 
 export function TicketTable({ tickets }: { readonly tickets: readonly Ticket[] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-x-auto rounded-2xl border border-surface-border bg-surface shadow-brand-card">
       <table className="min-w-full divide-y divide-slate-200 text-sm">
         <caption className="sr-only">Listado de solicitudes</caption>
-        <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-600">
+        <thead className="bg-brand-50 text-left text-xs uppercase tracking-wide text-slate-600">
           <tr>
             <th scope="col" className="px-4 py-3">
               Código
@@ -32,7 +32,7 @@ export function TicketTable({ tickets }: { readonly tickets: readonly Ticket[] }
         </thead>
         <tbody className="divide-y divide-slate-100">
           {tickets.map((ticket) => (
-            <tr key={ticket.id} className="hover:bg-slate-50">
+            <tr key={ticket.id} className="transition-colors duration-200 hover:bg-brand-50/70">
               <td className="whitespace-nowrap px-4 py-3 font-mono text-xs">{ticket.code}</td>
               <td className="px-4 py-3">
                 <Link

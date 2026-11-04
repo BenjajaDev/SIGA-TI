@@ -11,6 +11,11 @@ import {
 } from './application/use-cases/branding/branding';
 import { ListCategoriesUseCase, ListUsersUseCase } from './application/use-cases/catalog/catalog';
 import {
+  CreateUserUseCase,
+  DeactivateUserUseCase,
+  UpdateUserUseCase,
+} from './application/use-cases/catalog/manage-users';
+import {
   GetDashboardSummaryUseCase,
   GetResolutionMetricsUseCase,
   GetTechnicianWorkloadUseCase,
@@ -105,6 +110,9 @@ export const buildApp = (env: Env, db: Database, overrides: Overrides = {}): Exp
     catalog: {
       categories: new ListCategoriesUseCase(categories),
       users: new ListUsersUseCase(users),
+      createUser: new CreateUserUseCase(users, hasher),
+      updateUser: new UpdateUserUseCase(users, hasher, clock),
+      deactivateUser: new DeactivateUserUseCase(users, clock),
     },
   });
 };

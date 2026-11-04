@@ -32,6 +32,16 @@ const setup = (handler: (url: string, init: RequestInit) => Response | Promise<R
 };
 
 describe('createHttpClient', () => {
+  it('envía DELETE autenticado y acepta una respuesta 204', async () => {
+    const { client, fetchFn } = setup(() => new Response(null, { status: 204 }));
+    client.setAccessToken('tok');
+    await expect(client.deleteNoContent('/users/user-id')).resolves.toBeUndefined();
+    const [url, init] = fetchFn.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('/api/v1/users/user-id');
+    expect(init.method).toBe('DELETE');
+    expect((init.headers as Record<string, string>).Authorization).toContain('tok');
+  });
+
   it('envía el access token y serializa la consulta ignorando vacíos', async () => {
     const { client, fetchFn } = setup(() => json(200, { ok: true }));
     client.setAccessToken('tok');

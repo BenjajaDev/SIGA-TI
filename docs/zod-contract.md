@@ -266,9 +266,13 @@ export const resolutionMetricsSchema = z
 
 Reexporta todo lo anterior (`export * from './enums'`, …). Sin lógica.
 
+## Administración de usuarios
+
+`users.ts` exporta `createUserRequestSchema`, `updateUserRequestSchema` y `userIdParamsSchema`. Los contratos de creación y edición son estrictos, normalizan el correo a minúsculas, validan el rol y exigen contraseña inicial de al menos 12 caracteres. La contraseña en edición es opcional; nunca forma parte de `userSchema` ni de las respuestas.
+
 ## Notas de diseño
 
-- Prototipo: orden fijo de listados (`createdAt` descendente); sin esquemas de administración (RF-12 fuera del contrato).
+- Los listados de usuarios conservan orden fijo por nombre; no hay paginación en el prototipo.
 
 - `shared` no depende de Express ni de Prisma; sí de `zod`. El dominio de la API importa **solo** `enums.ts` (constantes y tipos).
 - Los enums de Prisma se verifican contra estos en tiempo de compilación (ADR-019) con aserciones del tipo `satisfies Record<PrismaRole, true>`.

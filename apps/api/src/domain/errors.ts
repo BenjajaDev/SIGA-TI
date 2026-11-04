@@ -54,7 +54,12 @@ export class NotFoundError extends AppError {
 }
 
 export type ConflictCode =
-  'INVALID_TRANSITION' | 'INVALID_ASSIGNEE' | 'CONCURRENT_MODIFICATION' | 'TICKET_CLOSED';
+  | 'INVALID_TRANSITION'
+  | 'INVALID_ASSIGNEE'
+  | 'CONCURRENT_MODIFICATION'
+  | 'TICKET_CLOSED'
+  | 'EMAIL_IN_USE'
+  | 'LAST_ACTIVE_ADMIN';
 
 export class ConflictError extends AppError {
   constructor(

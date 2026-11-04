@@ -1,6 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+
+const require = createRequire(import.meta.url);
 
 export default function setup(): void {
   const envFile = fileURLToPath(new URL('../../../../.env', import.meta.url));
@@ -10,7 +13,8 @@ export default function setup(): void {
   if (testDatabaseUrl === undefined) {
     throw new Error('Defina TEST_DATABASE_URL (ver .env.example) para las pruebas de integración');
   }
-  execFileSync('pnpm', ['exec', 'prisma', 'migrate', 'deploy'], {
+  const prismaCli = require.resolve('prisma/build/index.js');
+  execFileSync(process.execPath, [prismaCli, 'migrate', 'deploy'], {
     cwd: fileURLToPath(new URL('../..', import.meta.url)),
     env: { ...process.env, DATABASE_URL: testDatabaseUrl },
     stdio: 'pipe',

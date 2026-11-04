@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PRIORITIES } from '@siga/shared';
 import { seedBase } from '../../prisma/seed/base';
+import { seedDemo } from '../../prisma/seed/demo';
 import { CATEGORIES, USERS } from '../../prisma/seed/data';
 import { Argon2PasswordHasher } from '../../src/infrastructure/security/argon2-password-hasher';
 import { createTestContext } from '../helpers/context';
@@ -31,5 +32,18 @@ describe('seed:base', () => {
   it('todos los correos pertenecen al dominio ficticio reservado', async () => {
     const users = await ctx.db.user.findMany();
     expect(users.every((u) => u.email.endsWith('@siga-ti.test'))).toBe(true);
+  });
+
+  it('genera solicitudes demo representativas de forma idempotente', async () => {
+    await seedDemo(ctx.db);
+    const firstTicketCount = await ctx.db.ticket.count();
+    const firstEventCount = await ctx.db.ticketEvent.count();
+
+    await seedDemo(ctx.db);
+
+    expect(firstTicketCount).toBe(40);
+    expect(await ctx.db.ticket.count()).toBe(firstTicketCount);
+    expect(await ctx.db.ticketEvent.count()).toBe(firstEventCount);
+    expect(await ctx.db.ticket.groupBy({ by: ['status'] })).toHaveLength(6);
   });
 });

@@ -19,7 +19,10 @@ afterAll(async () => {
 
 describe('contrato OpenAPI', () => {
   it('docs/openapi.yaml coincide con el generado desde los esquemas Zod', () => {
-    expect(readFileSync(OPENAPI_FILE, 'utf8')).toBe(renderOpenApiYaml());
+    const normalizeLineEndings = (content: string): string => content.replace(/\r\n/g, '\n');
+    expect(normalizeLineEndings(readFileSync(OPENAPI_FILE, 'utf8'))).toBe(
+      normalizeLineEndings(renderOpenApiYaml()),
+    );
   });
 });
 

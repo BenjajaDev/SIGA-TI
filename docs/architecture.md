@@ -152,7 +152,7 @@ siga-ti/
 
 ## 8. Manejo de errores
 
-Jerarquía `AppError` (dominio/aplicación) → `ValidationError 400`, `UnauthenticatedError 401`, `ForbiddenError 403`, `NotFoundError 404`, `ConflictError 409` (con subcódigos `INVALID_TRANSITION`, `INVALID_ASSIGNEE`, `CONCURRENT_MODIFICATION`, `EMAIL_ALREADY_EXISTS`), `RateLimitedError 429`. Todo lo no controlado → `500 INTERNAL_ERROR` con mensaje genérico; el detalle va solo al log (con `requestId`). Catálogo completo en `openapi.yaml`.
+Jerarquía `AppError` (dominio/aplicación) → `ValidationError 400`, `UnauthenticatedError 401`, `ForbiddenError 403`, `NotFoundError 404`, `ConflictError 409` (con subcódigos `INVALID_TRANSITION`, `INVALID_ASSIGNEE`, `CONCURRENT_MODIFICATION`, `EMAIL_IN_USE`, `LAST_ACTIVE_ADMIN`), `RateLimitedError 429`. Todo lo no controlado → `500 INTERNAL_ERROR` con mensaje genérico; el detalle va solo al log (con `requestId`). Catálogo completo en `openapi.yaml`.
 
 ## 9. Estrategia de pruebas (prototipo)
 

@@ -8,7 +8,7 @@ import {
 import { useState } from 'react';
 import { useUsers } from '../../hooks/use-catalog';
 import { useAssignTicket, useTransitionTicket } from '../../hooks/use-tickets';
-import { transitionLabel } from '../../lib/labels';
+import { STATUS_LABEL, transitionLabel } from '../../lib/labels';
 import { actorContextFor } from '../../lib/ticket-context';
 import { errorMessage } from '../../services/api-error';
 import { Alert } from '../atoms/alert';
@@ -24,7 +24,35 @@ function TransitionPanel({ ticket, user }: { readonly ticket: Ticket; readonly u
 
   if (rules.length === 0) {
     return (
-      <p className="text-sm text-slate-500">No tiene acciones disponibles sobre esta solicitud.</p>
+      <div className="flex items-start gap-3 rounded-xl border border-surface-border bg-surface-muted p-3.5">
+        <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-700">
+          <svg
+            aria-hidden="true"
+            className="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              d="M12 8v4m0 4h.01M4.93 19h14.14a1.5 1.5 0 0 0 1.3-2.25L13.3 4.5a1.5 1.5 0 0 0-2.6 0L3.63 16.75A1.5 1.5 0 0 0 4.93 19Z"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+        <p className="text-sm leading-5 text-slate-600">
+          {user.role === 'ADMIN'
+            ? 'El administrador cuenta con acceso de consulta; la gestión corresponde al supervisor, al técnico asignado o al solicitante.'
+            : user.role === 'TECNICO'
+              ? 'Solo el técnico asignado puede cambiar el estado de esta solicitud.'
+              : user.role === 'SUPERVISOR'
+                ? `No hay transiciones disponibles desde el estado ${STATUS_LABEL[ticket.status]}.`
+                : ticket.status === 'CERRADA'
+                  ? 'La solicitud está cerrada y no admite más cambios.'
+                  : 'Podrá cerrar o reabrir la solicitud cuando se encuentre resuelta.'}
+        </p>
+      </div>
     );
   }
 

@@ -25,6 +25,7 @@ export interface HttpClient {
   ): Promise<z.output<S>>;
   put<S extends z.ZodType>(path: string, schema: S, body: unknown): Promise<z.output<S>>;
   postNoContent(path: string): Promise<void>;
+  deleteNoContent(path: string): Promise<void>;
   refreshSession(): Promise<AuthSession>;
   setAccessToken(token: string | null): void;
   onSessionExpired(handler: () => void): void;
@@ -146,6 +147,10 @@ export const createHttpClient = (config: HttpClientConfig): HttpClient => {
     },
     async postNoContent(path) {
       const response = await execute('POST', path, { auth: false });
+      if (!response.ok) throw await toApiError(response);
+    },
+    async deleteNoContent(path) {
+      const response = await execute('DELETE', path, {});
       if (!response.ok) throw await toApiError(response);
     },
     refreshSession,

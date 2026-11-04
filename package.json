@@ -16,6 +16,7 @@
     "db:up": "docker compose up -d db",
     "db:migrate": "pnpm --filter @siga/api db:migrate",
     "db:seed": "pnpm --filter @siga/api db:seed",
+    "db:seed:demo": "pnpm --filter @siga/api db:seed:demo",
     "db:reset": "pnpm --filter @siga/api db:reset",
     "openapi:generate": "pnpm --filter @siga/api openapi:generate",
     "prepare": "husky"

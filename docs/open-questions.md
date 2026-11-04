@@ -16,7 +16,7 @@ Cada una trae mi **propuesta por defecto**; si respondes "aprobado" sin cambios,
 | **Q-6** | **Reasignación y notas** | Reasignar permitido en `ASIGNADA`/`EN_PROGRESO`/`EN_ESPERA` sin cambiar estado; nota obligatoria al pausar, resolver y reabrir |
 | **Q-7** | **Backlog y panel** | Backlog = todo lo no resuelto ni cerrado; panel solo para SUPERVISOR y ADMIN |
 | **Q-8** | **Versiones** | Node 26 LTS (`engines >=24.11`), TypeScript 6.0.3, Prisma 7.10.1, PostgreSQL 18 |
-| **Q-9** | **Alcance** | RF-09 y RF-11 incluidos; **RF-12 fuera del contrato del prototipo** (usuarios y categorías se gestionan por semilla). CI (GitHub Actions) se difiere a la Etapa 4 |
+| **Q-9** | **Alcance** | RF-09 y RF-11 incluidos; por petición posterior, la administración de usuarios se implementa en el panel solo para ADMIN. La administración de categorías permanece fuera del prototipo. CI (GitHub Actions) se difiere a la Etapa 4 |
 | **Q-10** | **Acceso a docs de Prisma** | Habilitar `www.prisma.io` en la sesión; si no, valido con `prisma validate` en la Etapa 2 |
 
 ## B. Ambigüedades detectadas en el enunciado (y cómo las resolví)
@@ -46,7 +46,7 @@ Cada una trae mi **propuesta por defecto**; si respondes "aprobado" sin cambios,
 | S-10 | Zona horaria: se almacena UTC; la web formatea en `America/Santiago` |
 | S-11 | `resolvedAt` refleja la **última** resolución (se limpia al reabrir) |
 | S-12 | Dominio de correos ficticios `@siga-ti.test`; contraseña única de semillas desde `SEED_DEFAULT_PASSWORD` |
-| S-13 | Fuera del prototipo: limpieza de refresh tokens expirados, administración de usuarios/categorías (RF-12), paginación por cursor, Swagger restringido |
+| S-13 | Fuera del prototipo: limpieza de refresh tokens expirados, administración de categorías, paginación por cursor, Swagger restringido |
 
 ## D. Riesgos para el informe PMI
 

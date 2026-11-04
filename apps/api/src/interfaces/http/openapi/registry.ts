@@ -11,6 +11,7 @@ import {
   commentSchema,
   createCommentRequestSchema,
   createTicketRequestSchema,
+  createUserRequestSchema,
   dashboardSummarySchema,
   errorResponseSchema,
   listTicketsQuerySchema,
@@ -23,6 +24,8 @@ import {
   ticketPageSchema,
   ticketSchema,
   transitionTicketRequestSchema,
+  updateUserRequestSchema,
+  userIdParamsSchema,
   userListSchema,
   userSchema,
   workloadListSchema,
@@ -35,13 +38,13 @@ const ERROR_DESCRIPTIONS: Readonly<Record<ErrorStatus | 500, string>> = {
   401: 'No autenticado (UNAUTHENTICATED, INVALID_CREDENTIALS).',
   403: 'El rol o el actor no tiene permiso (FORBIDDEN).',
   404: 'No existe o no es visible para el usuario (NOT_FOUND).',
-  409: 'Regla de negocio (INVALID_TRANSITION, INVALID_ASSIGNEE, CONCURRENT_MODIFICATION, TICKET_CLOSED).',
+  409: 'Regla de negocio (incluye correo duplicado y protección del último administrador activo).',
   429: 'Demasiadas peticiones (RATE_LIMITED).',
   500: 'Error interno (INTERNAL_ERROR); el detalle solo queda en logs.',
 };
 
 interface RouteSpec {
-  readonly method: 'get' | 'post' | 'put';
+  readonly method: 'get' | 'post' | 'put' | 'delete';
   readonly path: string;
   readonly operationId: string;
   readonly tag: string;
@@ -314,6 +317,42 @@ const ROUTES: readonly RouteSpec[] = [
     query: listUsersQuerySchema,
     success: { status: 200, schema: userListSchema },
     errors: [400, 401, 403],
+  },
+  {
+    method: 'post',
+    path: '/users',
+    operationId: 'createUser',
+    tag: 'users',
+    summary: 'Crear usuario',
+    description: 'Solo ADMIN. La contraseña inicial debe tener al menos 12 caracteres.',
+    body: createUserRequestSchema,
+    success: { status: 201, schema: userSchema },
+    errors: [400, 401, 403, 409],
+  },
+  {
+    method: 'put',
+    path: '/users/{userId}',
+    operationId: 'updateUser',
+    tag: 'users',
+    summary: 'Editar usuario',
+    description:
+      'Solo ADMIN. Un cambio de contraseña, rol o estado revoca sus sesiones de renovación. No puede quitarse su propio rol de ADMIN ni desactivarse.',
+    params: userIdParamsSchema,
+    body: updateUserRequestSchema,
+    success: { status: 200, schema: userSchema },
+    errors: [400, 401, 403, 404, 409],
+  },
+  {
+    method: 'delete',
+    path: '/users/{userId}',
+    operationId: 'deactivateUser',
+    tag: 'users',
+    summary: 'Desactivar usuario',
+    description:
+      'Solo ADMIN. Desactivación lógica para conservar la trazabilidad; revoca sus sesiones. No permite desactivar al último administrador activo ni la cuenta propia.',
+    params: userIdParamsSchema,
+    success: { status: 204 },
+    errors: [401, 403, 404, 409],
   },
 ];
 

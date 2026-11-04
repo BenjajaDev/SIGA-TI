@@ -13,15 +13,15 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: branding } = useBranding();
-  const from = (location.state as LocationState | null)?.from ?? '/tickets';
+  const from = (location.state as LocationState | null)?.from;
 
-  if (state.status === 'authenticated') return <Navigate to={from} replace />;
+  if (state.status === 'authenticated') return <Navigate to={from ?? '/'} replace />;
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       <aside className="bg-brand-gradient hidden flex-col justify-between p-10 text-white lg:flex">
         <div className="flex items-center gap-3">
-          <BrandLogo className="h-14" />
+          <BrandLogo size="large" />
           <span className="text-xl font-semibold">{branding?.institutionName ?? 'SIGA-TI'}</span>
         </div>
         <div>
@@ -35,7 +35,7 @@ export function LoginPage() {
       <main className="flex items-center justify-center p-6">
         <div className="w-full max-w-sm space-y-6">
           <div className="bg-brand-gradient -mx-6 -mt-6 flex items-center gap-3 p-4 text-white lg:hidden">
-            <BrandLogo />
+            <BrandLogo size="small" />
             <span className="font-semibold">{branding?.institutionName ?? 'SIGA-TI'}</span>
           </div>
           <div>
@@ -45,7 +45,7 @@ export function LoginPage() {
           <LoginForm
             onSubmit={async ({ email, password }) => {
               await login(email, password);
-              void navigate(from, { replace: true });
+              void navigate(from ?? '/', { replace: true });
             }}
           />
         </div>

@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx --env-file=../../.env prisma/seed/base.ts",
+    "db:seed:demo": "tsx --env-file=../../.env prisma/seed/demo.ts",
     "db:reset": "prisma migrate reset --force",
     "openapi:generate": "tsx src/interfaces/http/openapi/generate.ts"
   },

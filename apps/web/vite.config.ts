@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { loadEnv } from 'vite';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 
 const ROOT_ENV_DIR = '../..';
 
@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       setupFiles: ['test/setup.ts'],
       css: false,
+      exclude: [...configDefaults.exclude, 'test/e2e/**'],
     },
   };
 });
