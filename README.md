@@ -62,3 +62,8 @@ docs/            Diseño, modelo de datos, contrato OpenAPI y decisiones
 ```
 
 Resúmenes: [`docs/etapa-2.md`](./docs/etapa-2.md) · [`docs/etapa-3.md`](./docs/etapa-3.md) · [`docs/etapa-4.md`](./docs/etapa-4.md).
+
+## Calidad y seguridad
+
+- E2E: `pnpm --filter @siga/web e2e` (10 pruebas con Playwright sobre la API y la web de desarrollo; se ejecutan en serie porque comparten base de datos y el límite de ingresos, que la configuración sube a 1000 al arrancar la API).
+- Revisión de seguridad y riesgos aceptados: [`docs/security-review.md`](./docs/security-review.md).

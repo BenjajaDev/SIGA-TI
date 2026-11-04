@@ -16,3 +16,4 @@
 | [etapa-4.md](./etapa-4.md) | Resumen de la Etapa 4: pruebas, E2E, revisión de seguridad y datos de demostración |
 
 Estado: **Etapas 1–4 completas.**
+| [security-review.md](./security-review.md) | Revisión de seguridad: controles, hallazgos corregidos y riesgos aceptados |

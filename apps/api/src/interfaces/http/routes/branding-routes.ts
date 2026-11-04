@@ -5,6 +5,7 @@ import type {
   GetBrandingUseCase,
   UpdateBrandingUseCase,
 } from '../../../application/use-cases/branding/branding';
+import { assertAdmin } from '../../../domain/services/ticket-access-policy';
 import { currentActor } from '../request-context';
 import { parseInput } from '../validation';
 
@@ -28,9 +29,11 @@ export const createBrandingRouter = (deps: BrandingRoutesDeps): Router => {
     res.json(serialize(await deps.get.execute()));
   });
 
-  router.put('/', express.json({ limit: LOGO_BODY_LIMIT }), deps.authenticate, async (req, res) => {
+  router.put('/', deps.authenticate, express.json({ limit: LOGO_BODY_LIMIT }), async (req, res) => {
+    const actor = currentActor(req);
+    assertAdmin(actor);
     const data = parseInput(updateBrandingRequestSchema, req.body);
-    res.json(serialize(await deps.update.execute(currentActor(req), data)));
+    res.json(serialize(await deps.update.execute(actor, data)));
   });
 
   return router;
