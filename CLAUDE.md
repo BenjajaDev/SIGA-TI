@@ -92,3 +92,16 @@ Entrega en docs/:
 6. Una lista de preguntas abiertas y supuestos que debo confirmar. Incluye al menos: horas de SLA por prioridad (propuesta inicial: CRITICA 8 h, ALTA 24 h, MEDIA 72 h, BAJA 120 h), categorías iniciales y si el supervisor puede registrar solicitudes a nombre de otro usuario.
    Al terminar, detente y espera mi aprobación antes de escribir código.
 7. Añade skills de diseño y mejora el diseño al máximo, con animaciones fluidas.
+
+# Skills de diseño y precedencia
+
+Las skills externas de `.claude/skills/` se instalan con `~/claude-skills/instalar-skills.sh -d . -p diseno,movimiento,movimiento-web,web-movil` (repositorio `BenjajaDev/claude-skills`, fijadas por commit). Las skills propias están en `.agents/skills/` (`siga-ui-design`, `siga-motion-design`).
+
+Ante un choque entre skills, gana el proyecto, en este orden:
+
+1. Accesibilidad (WCAG AA, `prefers-reduced-motion`, teclado) y los contratos del proyecto.
+2. La identidad visual editable: `--brand-primary`, `--brand-secondary`, `--brand-angle` y `--brand-gradient`. Nunca se fijan colores de institución en componentes; toda paleta deriva de esos tokens.
+3. Los tokens y componentes existentes en `apps/web/src`.
+4. Recién después, el criterio de la skill externa.
+
+Ninguna skill externa justifica instalar una dependencia nueva sin aprobarlo antes.

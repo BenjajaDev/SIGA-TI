@@ -12,7 +12,18 @@ const noInfraLibs = {
 };
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/generated/**', '**/coverage/**', '**/node_modules/**', 'docs/**'] },
+  {
+    ignores: [
+      '**/dist/**',
+      '**/generated/**',
+      '**/coverage/**',
+      '**/node_modules/**',
+      'docs/**',
+      '.claude/**',
+      '.agents/**',
+      'test-results/**',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
   ...tseslint.configs.stylisticTypeChecked,
