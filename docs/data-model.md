@@ -139,20 +139,26 @@ Cada operación que modifica un ticket inserta su evento **dentro de la misma tr
 Se versionan en `prisma/migrations/<ts>_integrity_constraints/migration.sql` y se cubren con pruebas de integración que intentan violarlas.
 
 ```sql
--- Coherencia estado/asignación (la más valiosa: protege el invariante central)
-ALTER TABLE tickets ADD CONSTRAINT tickets_assignee_required
-  CHECK ((status = 'ABIERTA') = (assignee_id IS NULL));
-ALTER TABLE sla_policies ADD CONSTRAINT sla_hours_positive CHECK (resolution_hours > 0);
+-- Coherencia estado/asignación (protege el invariante central)
+ALTER TABLE "tickets" ADD CONSTRAINT "tickets_assignee_required"
+  CHECK (("status" = 'ABIERTA') = ("assigneeId" IS NULL));
+
+ALTER TABLE "sla_policies" ADD CONSTRAINT "sla_hours_positive"
+  CHECK ("resolutionHours" > 0);
 
 -- Historial de solo inserción
 CREATE FUNCTION forbid_ticket_event_mutation() RETURNS trigger AS $$
 BEGIN
   RAISE EXCEPTION 'ticket_events is append-only';
-END; $$ LANGUAGE plpgsql;
-CREATE TRIGGER ticket_events_append_only
-  BEFORE UPDATE OR DELETE ON ticket_events
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER "ticket_events_append_only"
+  BEFORE UPDATE OR DELETE ON "ticket_events"
   FOR EACH ROW EXECUTE FUNCTION forbid_ticket_event_mutation();
 ```
+
+> Estado real: este SQL es el de la migración `*_init` (columnas en camelCase, convención por defecto de Prisma). Además existe la tabla `brand_settings` (migración `branding`) para la identidad visual.
 
 Prototipo: se mantienen solo estas dos restricciones y el trigger; el resto de coherencias (fechas, forma de cada evento) las garantiza el dominio y sus pruebas. `TRUNCATE` no activa el trigger de fila, por lo que las pruebas pueden limpiar la tabla entre casos.
 

@@ -2,7 +2,7 @@
 
 Sistema de Gestión de Solicitudes TI (prototipo, datos ficticios): autenticación y roles, registro, asignación y seguimiento de solicitudes e indicadores.
 
-> Estado: **Etapas 1–3 completas** (diseño, backend y frontend). QA final, E2E y datos de demostración (Etapa 4) pendientes. Diseño en [`docs/`](./docs/README.md).
+> Estado: **Etapas 1–4 completas** (diseño, backend, frontend y QA). Diseño en [`docs/`](./docs/README.md).
 
 ## Requisitos
 
@@ -18,6 +18,7 @@ pnpm db:up                      # PostgreSQL local con Docker (o use uno propio)
 pnpm --filter @siga/api db:generate
 pnpm db:migrate
 pnpm db:seed                    # catálogos, SLA y usuarios ficticios
+pnpm db:seed:demo               # (opcional) 30 solicitudes de demostración con historial
 pnpm --filter @siga/api dev     # API en http://localhost:3000
 pnpm --filter @siga/web dev     # Web en http://localhost:5173 (proxy /api → API)
 ```
@@ -28,13 +29,14 @@ pnpm --filter @siga/web dev     # Web en http://localhost:5173 (proxy /api → A
 
 ## Scripts
 
-| Comando                 | Acción                                                                                       |
-| ----------------------- | -------------------------------------------------------------------------------------------- |
-| `pnpm lint`             | ESLint (`no-explicit-any` y reglas de capas como error)                                      |
-| `pnpm typecheck`        | TypeScript estricto en todos los paquetes                                                    |
-| `pnpm test`             | Unitarias + integración (requiere `TEST_DATABASE_URL`, ver `.env.example`)                   |
-| `pnpm openapi:generate` | Regenera `docs/openapi.yaml` desde los esquemas Zod (una prueba verifica que no haya deriva) |
-| `pnpm db:reset`         | Recrea la base de desarrollo (solo desarrollo)                                               |
+| Comando                 | Acción                                                                                                |
+| ----------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pnpm lint`             | ESLint (`no-explicit-any` y reglas de capas como error)                                               |
+| `pnpm typecheck`        | TypeScript estricto en todos los paquetes                                                             |
+| `pnpm test`             | Unitarias + integración (requiere `TEST_DATABASE_URL`, ver `.env.example`)                            |
+| `pnpm test:e2e`         | 8 pruebas E2E con Playwright (levanta API y web propios sobre `TEST_DATABASE_URL`; reinicia esa base) |
+| `pnpm openapi:generate` | Regenera `docs/openapi.yaml` desde los esquemas Zod (una prueba verifica que no haya deriva)          |
+| `pnpm db:reset`         | Recrea la base de desarrollo (solo desarrollo)                                                        |
 
 Las pruebas de integración usan PostgreSQL real (`siga_ti_test`, creada por `docker/postgres/init-test-db.sql`); aplican las migraciones solas.
 
@@ -47,4 +49,6 @@ packages/shared  Esquemas Zod del contrato (API y, luego, web)
 docs/            Diseño, modelo de datos, contrato OpenAPI y decisiones
 ```
 
-Resúmenes: [`docs/etapa-2.md`](./docs/etapa-2.md) · [`docs/etapa-3.md`](./docs/etapa-3.md).
+Resúmenes: [`etapa-2`](./docs/etapa-2.md) · [`etapa-3`](./docs/etapa-3.md) · [revisión de seguridad](./docs/security-review.md).
+
+> Las pruebas de integración y E2E **vacían** la base indicada en `TEST_DATABASE_URL`: no la apunte a datos que quiera conservar.

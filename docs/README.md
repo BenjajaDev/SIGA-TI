@@ -14,4 +14,6 @@
 | [etapa-2.md](./etapa-2.md) | Resumen de la Etapa 2: entregado, cambios respecto del diseño y limitaciones |
 | [etapa-3.md](./etapa-3.md) | Resumen de la Etapa 3: frontend, identidad visual editable, hallazgos y limitaciones |
 
-Estado: **Etapas 1–3 completas.**
+| [security-review.md](./security-review.md) | QA: E2E, datos demo, resultados y revisión de seguridad |
+
+Estado: **Etapas 1–4 completas.**

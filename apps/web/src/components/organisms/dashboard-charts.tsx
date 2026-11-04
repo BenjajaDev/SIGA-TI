@@ -67,7 +67,12 @@ export function CategoryChart({ items }: { readonly items: readonly CategoryCoun
             <XAxis type="number" allowDecimals={false} tick={{ fontSize: 12 }} />
             <YAxis type="category" dataKey="name" width={150} tick={{ fontSize: 12 }} />
             <Tooltip formatter={(value) => [String(value), 'Solicitudes']} />
-            <Bar dataKey="count" fill="var(--brand-primary)" radius={[0, 4, 4, 0]} />
+            <Bar
+              dataKey="count"
+              fill="var(--brand-primary)"
+              radius={[0, 4, 4, 0]}
+              isAnimationActive={false}
+            />
           </BarChart>
         </ResponsiveContainer>
       </div>

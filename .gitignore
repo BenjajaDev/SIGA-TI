@@ -5,3 +5,5 @@ coverage
 .env.test
 *.log
 **/generated
+test-results
+playwright-report

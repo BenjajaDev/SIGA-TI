@@ -6,6 +6,7 @@ export interface NewComment {
   readonly authorId: string;
   readonly body: string;
   readonly visibility: CommentVisibility;
+  readonly createdAt: Date;
 }
 
 export interface CommentRepository {

@@ -1,6 +1,7 @@
 import type { CommentVisibility } from '@siga/shared';
 import type { Actor, Comment } from '../../../domain/entities';
 import { ConflictError, ForbiddenError } from '../../../domain/errors';
+import type { Clock } from '../../../domain/ports/security';
 import type { CommentRepository } from '../../../domain/ports/comment-repository';
 import type { TicketRepository } from '../../../domain/ports/ticket-repository';
 import {
@@ -21,6 +22,7 @@ export class AddCommentUseCase {
   constructor(
     private readonly tickets: TicketRepository,
     private readonly comments: CommentRepository,
+    private readonly clock: Clock,
   ) {}
 
   async execute(input: AddCommentInput): Promise<Comment> {
@@ -38,6 +40,7 @@ export class AddCommentUseCase {
       authorId: actor.id,
       body: input.body,
       visibility,
+      createdAt: this.clock.now(),
     });
   }
 }

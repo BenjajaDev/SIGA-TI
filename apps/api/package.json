@@ -14,7 +14,9 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx --env-file=../../.env prisma/seed/base.ts",
     "db:reset": "prisma migrate reset --force",
-    "openapi:generate": "tsx src/interfaces/http/openapi/generate.ts"
+    "openapi:generate": "tsx src/interfaces/http/openapi/generate.ts",
+    "db:seed:demo": "tsx --env-file=../../.env prisma/seed/demo.ts",
+    "db:reset:test": "tsx prisma/seed/e2e-reset.ts"
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "9.1.0",

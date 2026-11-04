@@ -89,7 +89,7 @@ export const buildApp = (env: Env, db: Database, overrides: Overrides = {}): Exp
       assign: new AssignTicketUseCase(tickets, users, clock),
       transition: new TransitionTicketUseCase(tickets, clock),
       events: new ListTicketEventsUseCase(tickets),
-      addComment: new AddCommentUseCase(tickets, comments),
+      addComment: new AddCommentUseCase(tickets, comments, clock),
       listComments: new ListCommentsUseCase(tickets, comments),
     },
     dashboard: {

@@ -18,7 +18,9 @@
     "db:seed": "pnpm --filter @siga/api db:seed",
     "db:reset": "pnpm --filter @siga/api db:reset",
     "openapi:generate": "pnpm --filter @siga/api openapi:generate",
-    "prepare": "husky"
+    "prepare": "husky",
+    "db:seed:demo": "pnpm --filter @siga/api db:seed:demo",
+    "test:e2e": "playwright test"
   },
   "lint-staged": {
     "*.{ts,tsx,mjs}": [
@@ -31,6 +33,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.20.5",
     "eslint": "10.14.0",
     "eslint-plugin-react-hooks": "7.1.1",
     "husky": "9.1.7",
